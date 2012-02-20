@@ -22,13 +22,13 @@ else
 end
 
 logfile = "#{LOG_DIR}/#{ENV["RACK_ENV"]}.log"
-#LOGGER = OTLogger.new(logfile,'daily') # daily rotation
-LOGGER = OTLogger.new(logfile) # no rotation
-LOGGER.formatter = Logger::Formatter.new #this is neccessary to restore the formating in case active-record is loaded
+#$logger = OTLogger.new(logfile,'daily') # daily rotation
+$logger = OTLogger.new(logfile) # no rotation
+$logger.formatter = Logger::Formatter.new #this is neccessary to restore the formating in case active-record is loaded
 if CONFIG[:logger] and CONFIG[:logger] == "debug"
-	LOGGER.level = Logger::DEBUG
+	$logger.level = Logger::DEBUG
 else
-	LOGGER.level = Logger::WARN 
+	$logger.level = Logger::WARN 
 end
 
 # Regular expressions for parsing classification data
