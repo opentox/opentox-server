@@ -6,6 +6,7 @@ require 'sinatra/base'
 
 module OpenTox
   class Service < Sinatra::Base
+    helpers Sinatra::UrlForHelper
     set :raise_errors, false
     set :show_exceptions, false
     error do
