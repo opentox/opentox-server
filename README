@@ -1,4 +1,32 @@
-opentox-server
-=============
+opentox-server: Common part for OpenTox webservices
 
-Common part for Opentox webservices
+Installation:
+
+  gem install opentox-service
+
+Development:
+
+  git clone git@github.com:<my-opentox-service>.git 
+  cd <my-opentox-service>
+  bundle install
+  ./bin/toxbank-investigation-install # if not already installed, do not start webserver
+  export RACK_ENV=development
+  # if you are working on opentox-server|client gems as well edit Gemfile e.g.
+  # gem 'opentox-server', :path => "~/opentox-server"
+  # gem "opentox-client", :path => "~/opentox-client"
+  # start webserver in development mode (runs at port 8080, should reload changes from source files)
+  unicorn
+  # open new terminal
+  git flow init 
+  git flow feature start <your feature>
+  # code, test, code, ...
+  git flow feature finish <your feature>
+  # test
+  # create release branch
+  # increase version (in toxbank-investigation.gemspec)
+  # install into system gems
+  rake install
+  # test
+  # create master
+  # release
+  rake release

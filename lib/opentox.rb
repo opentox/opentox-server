@@ -1,4 +1,5 @@
 require 'sinatra/base'
+require "sinatra/reloader"
 
 module OpenTox
   # Base class for OpenTox services
@@ -11,6 +12,10 @@ module OpenTox
     set :raise_errors, false
     set :show_exceptions, false
     set :static, false
+
+    configure :development do
+      register Sinatra::Reloader
+    end
 
     error do
       # TODO: set actor, calling OT::Error with uri parameter does not work

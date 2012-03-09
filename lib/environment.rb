@@ -9,6 +9,7 @@ config_file = File.join(config_dir, "#{ENV['RACK_ENV']}.yaml")
 TMP_DIR = File.join(basedir, "tmp")
 LOG_DIR = File.join(basedir, "log")
 
+=begin
 if File.exist?(config_file)
 	CONFIG = YAML.load_file(config_file)
   not_found_error "Could not load configuration from \"#{config_file.to_s}\"" unless CONFIG
@@ -19,10 +20,12 @@ else
 	puts "Please edit #{config_file} and restart your application."
 	exit
 end
+=end
 
 logfile = "#{LOG_DIR}/#{ENV["RACK_ENV"]}.log"
 $logger = OTLogger.new(logfile) 
 
+=begin
 if CONFIG[:logger] and CONFIG[:logger] == "debug"
 	$logger.level = Logger::DEBUG
 else
@@ -34,4 +37,5 @@ AA_SERVER = CONFIG[:authorization] ? (CONFIG[:authorization][:server] ? CONFIG[:
 CONFIG[:authorization][:authenticate_request] = [""] unless CONFIG[:authorization][:authenticate_request]
 CONFIG[:authorization][:authorize_request] =  [""] unless CONFIG[:authorization][:authorize_request]
 CONFIG[:authorization][:free_request] =  [""] unless CONFIG[:authorization][:free_request]
+=end
 
