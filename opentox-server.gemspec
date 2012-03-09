@@ -9,6 +9,7 @@ Gem::Specification.new do |s|
   s.homepage    = "http://github.com/opentox/opentox-server"
   s.summary     = %q{Ruby library for opentox services}
   s.description = %q{Ruby library for opentox services}
+  s.license     = 'GPL-3'
 
   s.rubyforge_project = "opentox-server"
 
