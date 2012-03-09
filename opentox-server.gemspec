@@ -1,13 +1,12 @@
 # -*- encoding: utf-8 -*-
 $:.push File.expand_path("../lib", __FILE__)
-require "opentox-server/version"
 
 Gem::Specification.new do |s|
   s.name        = "opentox-server"
-  s.version     = Opentox::Server::VERSION
+  s.version     = "0.0.1pre"
   s.authors     = ["Christoph Helma"]
   s.email       = ["helma@in-silico.ch"]
-  s.homepage    = ""
+  s.homepage    = "http://github.com/opentox/opentox-server"
   s.summary     = %q{Ruby library for opentox services}
   s.description = %q{Ruby library for opentox services}
 
