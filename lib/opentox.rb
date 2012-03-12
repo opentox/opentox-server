@@ -2,9 +2,8 @@ require 'sinatra/base'
 require "sinatra/reloader"
 
 module OpenTox
+
   # Base class for OpenTox services
-  # Errors are formated according to acccept-header
-  # Non OpenTox::Errors (defined in error.rb) are handled as internal error (500), stacktrace is logged
   class Service < Sinatra::Base
 
     helpers Sinatra::UrlForHelper
@@ -17,25 +16,30 @@ module OpenTox
       register Sinatra::Reloader
     end
 
+    helpers do
+      def uri
+        params[:id] ? url_for("/#{params[:id]}", :full) : "#{request.env['rack.url_scheme']}://#{request.env['HTTP_HOST']}"
+      end
+    end
+
+    before do
+      @accept = request.env['HTTP_ACCEPT']
+      response['Content-Type'] = @accept
+      # TODO: A+A
+    end
+
     error do
       error = request.env['sinatra.error']
-      error.uri = "#{request.env['rack.url_scheme']}://#{request.env['HTTP_HOST']}#{request.env['REQUEST_URI']}"
-      case request.env['HTTP_ACCEPT']
-      when 'application/rdf+xml'
-        content_type 'application/rdf+xml'
-      when /html/
-        content_type 'text/html'
-      when "text/n3"
-        content_type "text/n3"
-      else
-        content_type "text/turtle"
-      end
+      error.uri = uri
       if error.respond_to? :report
-        case request.env['HTTP_ACCEPT']
+        # Errors are formated according to acccept-header
+        case @accept
         when 'application/rdf+xml'
           body = error.report.to_rdfxml
         when /html/
-          body = error.report.to_yaml
+          # TODO
+          # body = error.report.to_html
+          body = error.report.to_turtle
         when "text/n3"
           body = error.report.to_ntriples
         else
