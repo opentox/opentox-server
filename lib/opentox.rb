@@ -18,9 +18,8 @@ module OpenTox
     end
 
     error do
-      # TODO: set actor, calling OT::Error with uri parameter does not work
       error = request.env['sinatra.error']
-      #error.report.actor = "#{request.env['rack.url_scheme']}://#{request.env['HTTP_HOST']}#{request.env['REQUEST_URI']}"
+      error.uri = "#{request.env['rack.url_scheme']}://#{request.env['HTTP_HOST']}#{request.env['REQUEST_URI']}"
       case request.env['HTTP_ACCEPT']
       when 'application/rdf+xml'
         content_type 'application/rdf+xml'
@@ -47,9 +46,8 @@ module OpenTox
         body = error.message
         body += "\n#{error.backtrace}"
       end
-      code = error.http_code if error.respond_to? :http_code
-      code ||= 500
-      halt code, error.report.to_turtle
+      error.respond_to?(:http_code) ? code = error.http_code : code = 500
+      halt code, body
     end
   end
 end
