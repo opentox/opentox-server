@@ -29,8 +29,9 @@ module OpenTox
     end
 
     error do
+      # TODO: convert to OpenTox::Error and set URI
       error = request.env['sinatra.error']
-      error.uri = uri
+      #error.uri = uri
       if error.respond_to? :report
         # Errors are formated according to acccept-header
         case @accept
@@ -46,7 +47,7 @@ module OpenTox
           body = error.report.to_turtle
         end
       else
-        content_type "text/plain"
+        response['Content-Type'] = "text/plain"
         body = error.message
         body += "\n#{error.backtrace}"
       end
