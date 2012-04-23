@@ -27,4 +27,6 @@ Gem::Specification.new do |s|
   s.add_runtime_dependency 'emk-sinatra-url-for'
   s.add_runtime_dependency 'roo'
   s.add_runtime_dependency 'unicorn'
+  s.add_runtime_dependency '4store-ruby'
+  s.add_runtime_dependency 'rdf-n3'
 end

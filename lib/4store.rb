@@ -1,0 +1,175 @@
+module OpenTox
+  module Backend
+    class FourStore
+
+      #TODO: catch 4store errors
+
+      @@mime_format = {
+        "application/rdf+xml" => :rdfxml,
+        "text/turtle" => :turtle,
+        "text/plain" => :ntriples,
+        "text/uri-list" => :uri_list,
+        "application/json" => :json,
+        "application/x-yaml" => :yaml,
+        "text/x-yaml" => :yaml,
+        "text/yaml" => :yaml,
+        "text/html" => :html,
+        # TODO: compression, forms
+        #/sparql/ => :sparql #removed to prevent sparql injections
+      }
+
+      @@format_mime = {
+        :rdfxml => "application/rdf+xml", 
+        :turtle => "text/turtle",
+        :ntriples => "text/plain",
+        :uri_list => "text/uri-list",
+        :json => "application/json",
+        :yaml => "text/yaml",
+        :html => "text/html",
+      }
+
+      @@accept_formats = [:rdfxml, :turtle, :ntriples, :uri_list, :json, :yaml, :html]
+      @@content_type_formats = [:rdfxml, :turtle, :ntriples, :json, :yaml]
+      @@rdf_formats  = [:rdfxml, :turtle, :ntriples]
+
+      def self.list mime_type
+        mime_type = "text/html" if mime_type.match(%r{\*/\*})
+        bad_request_error "'#{mime_type}' is not a supported mime type. Please specify one of #{@@accept_formats.collect{|f| @@format_mime[f]}.join(", ")} in the Accept Header." unless @@accept_formats.include? @@mime_format[mime_type]
+        if mime_type =~ /json|yaml|uri-list/
+          sparql = "SELECT ?s WHERE {?s <#{RDF.type}> <#{@@class}>. }"
+        elsif mime_type =~ /turtle|html|rdf|plain/
+          sparql = "CONSTRUCT {?s ?p ?o.} WHERE {?s <#{RDF.type}> <#{@@class}>; ?p ?o. }"
+        else
+        end
+        query sparql, mime_type
+      end
+
+      def self.get uri, mime_type
+        mime_type = "text/html" if mime_type.match(%r{\*/\*})
+        bad_request_error "'#{mime_type}' is not a supported mime type. Please specify one of #{@@accept_formats.collect{|f| @@format_mime[f]}.join(", ")} in the Accept Header." unless @@accept_formats.include? @@mime_format[mime_type]
+        not_found_error "#{uri} not found." unless list("text/uri-list").split("\n").include?(uri)
+        sparql = "CONSTRUCT {?s ?p ?o.} FROM <#{uri}> WHERE { ?s ?p ?o. }"
+        query sparql, mime_type
+      end
+
+      def self.post uri, rdf, mime_type
+        bad_request_error "'#{mime_type}' is not a supported content type. Please use one of #{@@content_type_formats.collect{|f| @@format_mime[f]}.join(", ")}." unless @@content_type_formats.include? @@mime_format[mime_type]
+        rdf = convert rdf, @@mime_format[mime_type], :ntriples, uri unless mime_type == 'text/plain'
+        RestClient.post File.join(four_store_uri,"data")+"/", :data => rdf, :graph => uri, "mime-type" => "application/x-turtle" # not very consistent in 4store
+      end
+
+      def self.put uri, rdf, mime_type
+        bad_request_error "'#{mime_type}' is not a supported content type. Please use one of #{@@content_type_formats.collect{|f| @@format_mime[f]}.join(", ")}." unless @@content_type_formats.include? @@mime_format[mime_type]
+        rdf = convert rdf, @@mime_format[mime_type], :ntriples, uri 
+        rdf = "<#{uri}> <#{RDF.type}> <#{@@class}>." unless rdf
+        RestClient.put File.join(four_store_uri,"data",uri), rdf, :content_type => "application/x-turtle" # not very consistent in 4store
+      end
+
+      def self.delete uri
+        RestClientWrapper.delete data_uri uri
+      end
+
+      def self.query sparql, mime_type
+        if sparql =~ /SELECT/i
+          xml = RestClient.post File.join(four_store_uri,"sparql")+"/", :query => sparql
+          #TODO request tab delimited format to speed up parsing
+          list = parse_sparql_xml_results(xml).collect{|hash| hash["s"]}
+          case mime_type
+          when /json/
+            return list.to_json
+          when /yaml/
+            return list.to_yaml
+          when /uri-list/
+            return list.join "\n"
+          else
+            bad_request_error "#{mime_type} is not a supported mime type for SELECT statements. Please use one of text/uri-list, application/json, text/yaml, text/html."
+          end
+        elsif sparql =~ /CONSTRUCT/i
+          nt = RestClient.get(sparql_uri, :params => { :query => sparql }, :accept => "text/plain").body
+          return nt if mime_type == 'text/plain'
+          case mime_type
+          when /turtle/
+            return convert(nt,:ntriples, :turtle)
+          when /html/
+            # TODO: fix and improve
+            html = "<html><body>"
+            html += convert(nt,:ntriples, :turtle).gsub(%r{<(.*)>},'&lt;<a href="\1">\1</a>&gt;').gsub(/\n/,'<br/>')#.gsub(/ /,'&nbsp;')
+            html += "</body></html>"
+            return html
+          when "application/rdf+xml" 
+            return convert(nt,:ntriples, :rdfxml)
+          end
+        else
+          # TODO: check if this prevents SPARQL injections
+          bad_request_error "Only SELECT and CONSTRUCT are accepted SPARQL statements."
+        end
+      end
+
+      private
+
+      def self.convert rdf_string, input_format, output_format, rewrite_uri=nil
+        serialize(parse(rdf_string,input_format, rewrite_uri), output_format)
+      end
+
+      def self.parse string, format, rewrite_uri
+        rdf = RDF::Graph.new
+        subject = nil
+        statements = [] # use array instead of graph for performance reasons
+        RDF::Reader.for(format).new(string) do |reader|
+          reader.each_statement do |statement|
+            subject = statement.subject if statement.predicate == RDF.type and statement.object == @@class
+            statements << statement
+          end 
+        end
+        bad_request_error "No class specified with <#{RDF.type}> statement." unless subject
+        statements.each do |statement|
+          statement.subject = RDF::URI.new rewrite_uri if rewrite_uri and statement.subject == subject
+          rdf << statement
+        end
+        rdf
+      end
+
+      def self.serialize rdf, format
+        if format == :turtle # prefixes seen to need RDF::N3
+          string = RDF::N3::Writer.for(format).buffer(:prefixes => {:ot => "http://www.opentox.org/api/1.2#"})  do |writer|
+            rdf.each{|statement| writer << statement}
+          end
+        else
+          string = RDF::Writer.for(format).buffer  do |writer|
+            rdf.each{|statement| writer << statement}
+          end
+        end
+        string
+      end
+
+      def self.four_store_uri
+        $four_store[:uri].sub(%r{//},"//#{$four_store[:user]}:#{$four_store[:password]}@")
+      end
+
+      def self.sparql_uri 
+        File.join(four_store_uri, "sparql") + '/'
+      end
+
+      def self.data_uri uri
+        File.join(four_store_uri, "data","?graph=#{uri}")
+      end
+
+      def self.parse_sparql_xml_results(xml)
+        results = []
+        doc = REXML::Document.new(REXML::Source.new(xml))
+        doc.elements.each("*/results/result") do |result|
+          result_hash = {}
+          result.elements.each do |binding|
+            key = binding.attributes["name"]
+            value = binding.elements[1].text
+            type = binding.elements[1].name 
+            result_hash[key] = value
+          end
+          results.push result_hash
+        end
+        results
+      end
+
+    end
+  end
+end
