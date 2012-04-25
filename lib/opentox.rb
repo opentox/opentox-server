@@ -45,10 +45,12 @@ module OpenTox
       FourStore.list request.env['HTTP_ACCEPT']
     end
 
-    # Create a new URI, does not accept a payload (use put for this purpose)
+    # Create a new resource
+    # TODO: handle multipart uploads
     post '/?' do
+      rdf = request.body.read
       uri = uri(SecureRandom.uuid)
-      FourStore.put uri, request.body.read, request.content_type
+      FourStore.put(uri, rdf, request.content_type) unless rdf == ''
       response['Content-Type'] = "text/uri-list"
       uri
     end
@@ -58,7 +60,7 @@ module OpenTox
       FourStore.get(uri("/#{params[:id]}"), request.env['HTTP_ACCEPT'])
     end
 
-    # Modify (add rdf) a resource
+    # Modify (i.e. add rdf statments to) a resource
     post '/:id/?' do
       FourStore.post uri("/#{params[:id]}"), request.body.read, request.content_type
     end

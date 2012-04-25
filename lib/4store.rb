@@ -9,10 +9,10 @@ module OpenTox
         "text/turtle" => :turtle,
         "text/plain" => :ntriples,
         "text/uri-list" => :uri_list,
-        "application/json" => :json,
-        "application/x-yaml" => :yaml,
-        "text/x-yaml" => :yaml,
-        "text/yaml" => :yaml,
+        #"application/json" => :json,
+        #"application/x-yaml" => :yaml,
+        #"text/x-yaml" => :yaml,
+        #"text/yaml" => :yaml,
         "text/html" => :html,
         # TODO: compression, forms
         #/sparql/ => :sparql #removed to prevent sparql injections
@@ -23,13 +23,13 @@ module OpenTox
         :turtle => "text/turtle",
         :ntriples => "text/plain",
         :uri_list => "text/uri-list",
-        :json => "application/json",
-        :yaml => "text/yaml",
+        #:json => "application/json",
+        #:yaml => "text/yaml",
         :html => "text/html",
       }
 
-      @@accept_formats = [:rdfxml, :turtle, :ntriples, :uri_list, :json, :yaml, :html]
-      @@content_type_formats = [:rdfxml, :turtle, :ntriples, :json, :yaml]
+      @@accept_formats = [:rdfxml, :turtle, :ntriples, :uri_list, :html] #, :json, :yaml]
+      @@content_type_formats = [:rdfxml, :turtle, :ntriples]#, :json, :yaml]
       @@rdf_formats  = [:rdfxml, :turtle, :ntriples]
 
       def self.list mime_type
@@ -39,7 +39,6 @@ module OpenTox
           sparql = "SELECT ?s WHERE {?s <#{RDF.type}> <#{@@class}>. }"
         elsif mime_type =~ /turtle|html|rdf|plain/
           sparql = "CONSTRUCT {?s ?p ?o.} WHERE {?s <#{RDF.type}> <#{@@class}>; ?p ?o. }"
-        else
         end
         query sparql, mime_type
       end
@@ -54,15 +53,21 @@ module OpenTox
 
       def self.post uri, rdf, mime_type
         bad_request_error "'#{mime_type}' is not a supported content type. Please use one of #{@@content_type_formats.collect{|f| @@format_mime[f]}.join(", ")}." unless @@content_type_formats.include? @@mime_format[mime_type]
-        rdf = convert rdf, @@mime_format[mime_type], :ntriples, uri unless mime_type == 'text/plain'
+        rdf = convert rdf, @@mime_format[mime_type], :ntriples#, uri unless mime_type == 'text/plain'
         RestClient.post File.join(four_store_uri,"data")+"/", :data => rdf, :graph => uri, "mime-type" => "application/x-turtle" # not very consistent in 4store
       end
 
-      def self.put uri, rdf, mime_type
+      def self.put uri, rdf, mime_type, skip_rewrite=false
         bad_request_error "'#{mime_type}' is not a supported content type. Please use one of #{@@content_type_formats.collect{|f| @@format_mime[f]}.join(", ")}." unless @@content_type_formats.include? @@mime_format[mime_type]
-        rdf = convert rdf, @@mime_format[mime_type], :ntriples, uri 
-        rdf = "<#{uri}> <#{RDF.type}> <#{@@class}>." unless rdf
-        RestClient.put File.join(four_store_uri,"data",uri), rdf, :content_type => "application/x-turtle" # not very consistent in 4store
+        uuid = uri.sub(/\/$/,'').split('/').last
+        bad_request_error "'#{uri}' is not a valid URI." unless uuid =~ /[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}/
+        if !skip_rewrite
+          rdf = convert rdf, @@mime_format[mime_type], :ntriples, uri 
+        elsif mime_type != "text/plain" # ntriples are not converted
+          rdf = convert rdf, @@mime_format[mime_type], :ntriples
+        end
+        rdf = "<#{uri}> <#{RDF.type}> <#{@@class}>." unless rdf # create empty resource
+        RestClient.put File.join(four_store_uri,"data",uri), rdf, :content_type => "application/x-turtle" # content-type not very consistent in 4store
       end
 
       def self.delete uri
@@ -108,10 +113,10 @@ module OpenTox
       private
 
       def self.convert rdf_string, input_format, output_format, rewrite_uri=nil
-        serialize(parse(rdf_string,input_format, rewrite_uri), output_format)
+        rewrite_uri ?  serialize(parse_and_rewrite_uri(rdf_string,input_format, rewrite_uri), output_format) : serialize(parse(rdf_string,input_format), output_format)
       end
 
-      def self.parse string, format, rewrite_uri
+      def self.parse_and_rewrite_uri string, format, rewrite_uri
         rdf = RDF::Graph.new
         subject = nil
         statements = [] # use array instead of graph for performance reasons
@@ -129,8 +134,17 @@ module OpenTox
         rdf
       end
 
+      def self.parse string, format
+        rdf = RDF::Graph.new
+        RDF::Reader.for(format).new(string) do |reader|
+          reader.each_statement { |statement| rdf << statement }
+        end
+        rdf
+      end
+
       def self.serialize rdf, format
         if format == :turtle # prefixes seen to need RDF::N3
+          # TODO add prefixes
           string = RDF::N3::Writer.for(format).buffer(:prefixes => {:ot => "http://www.opentox.org/api/1.2#"})  do |writer|
             rdf.each{|statement| writer << statement}
           end
