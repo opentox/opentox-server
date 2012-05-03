@@ -38,7 +38,7 @@ module OpenTox
         if mime_type =~ /json|yaml|uri-list/
           sparql = "SELECT DISTINCT ?g WHERE {GRAPH ?g {?s ?p ?o} }"
         elsif mime_type =~ /turtle|html|rdf|plain/
-          sparql = "CONSTRUCT {?s ?p ?o.} WHERE {?s <#{RDF.type}> <#{@@class}>; ?p ?o. }"
+          sparql = "CONSTRUCT {?s ?p ?o.} WHERE {?s <#{RDF.type}> <#{klass}>; ?p ?o. }"
         end
         query sparql, mime_type
       end
@@ -69,7 +69,7 @@ module OpenTox
           rdf = convert rdf, @@mime_format[mime_type], :ntriples
         end
         unless rdf # create empty resource
-          rdf = "<#{uri}> <#{RDF.type}> <#{@@class}>."
+          rdf = "<#{uri}> <#{RDF.type}> <#{klass}>."
           rdf += "\n<#{uri}> <#{RDF::DC.date}> \"#{DateTime.now}\"."
         end
         RestClient.put File.join(four_store_uri,"data",uri), rdf, :content_type => "application/x-turtle" # content-type not very consistent in 4store
@@ -125,11 +125,13 @@ module OpenTox
 
       private
 
+      def self.klass
+        RDF::OT[SERVICE.capitalize]
+      end
+
       def self.available? uri
-        sparql = "SELECT DISTINCT ?s WHERE {GRAPH <#{uri}> {?s <#{RDF.type}> <#{@@class}>} }"
+        sparql = "SELECT DISTINCT ?s WHERE {GRAPH <#{uri}> {?s <#{RDF.type}> <#{klass}>} }"
         r = query(sparql, nil)
-        #puts "RESULT"
-        #puts r.inspect
         r.size == 1 and r.first == uri
       end
 
@@ -143,7 +145,7 @@ module OpenTox
         statements = [] # use array instead of graph for performance reasons
         RDF::Reader.for(format).new(string) do |reader|
           reader.each_statement do |statement|
-            subject = statement.subject if statement.predicate == RDF.type and statement.object == @@class
+            subject = statement.subject if statement.predicate == RDF.type and statement.object == klass
             statements << statement
           end 
         end

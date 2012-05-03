@@ -1,7 +1,8 @@
 require 'sinatra/base'
-require "sinatra/reloader"
-
 ENV["RACK_ENV"] ||= "production"
+require "sinatra/reloader" if ENV["RACK_ENV"] == "development"
+require File.join(ENV["HOME"],".opentox","config","#{SERVICE}.rb")
+
 
 logfile = File.join(ENV['HOME'], ".opentox","log","#{ENV["RACK_ENV"]}.log")
 $logger = OTLogger.new(logfile) 
@@ -16,6 +17,7 @@ module OpenTox
     set :raise_errors, false
     set :show_exceptions, false
     set :static, false
+    set :prefix, SERVICE
 
     configure :development do
       register Sinatra::Reloader
@@ -23,6 +25,7 @@ module OpenTox
 
     before do
       request.content_type ? response['Content-Type'] = request.content_type : response['Content-Type'] = request.env['HTTP_ACCEPT']
+      @prefix = "task"
     end
 
     # Attention: Error within tasks are catched by Task.create
@@ -43,38 +46,38 @@ module OpenTox
     # see http://jcalcote.wordpress.com/2008/10/16/put-or-post-the-rest-of-the-story/
 
     # Get a list of objects at the server
-    get '/?' do
+    get "/#{settings.prefix}/?" do
       FourStore.list request.env['HTTP_ACCEPT']
     end
 
     # Create a new resource
     # TODO: handle multipart uploads
-    post '/?' do
+    post "/#{settings.prefix}/?" do
       rdf = request.body.read
-      uri = uri(SecureRandom.uuid)
+      uri = uri("/#{settings.prefix}/#{SecureRandom.uuid}")
       FourStore.put(uri, rdf, request.content_type) unless rdf == ''
       response['Content-Type'] = "text/uri-list"
       uri
     end
 
     # Get resource representation
-    get '/:id/?' do
-      FourStore.get(uri("/#{params[:id]}"), request.env['HTTP_ACCEPT'])
+    get "/#{settings.prefix}/id/?" do
+      FourStore.get(uri("/#{settings.prefix}/#{params[:id]}"), request.env['HTTP_ACCEPT'])
     end
 
     # Modify (i.e. add rdf statments to) a resource
-    post '/:id/?' do
-      FourStore.post uri("/#{params[:id]}"), request.body.read, request.content_type
+    post "/#{settings.prefix}/:id/?" do
+      FourStore.post uri("/#{settings.prefix}/#{params[:id]}"), request.body.read, request.content_type
     end
 
     # Create or updata a resource
-    put '/:id/?' do
-      FourStore.put uri("/#{params[:id]}"), request.body.read, request.content_type
+    put "/#{settings.prefix}/:id/?" do
+      FourStore.put uri("/#{settings.prefix}/#{params[:id]}"), request.body.read, request.content_type
     end
 
     # Delete a resource
-    delete '/:id/?' do
-      FourStore.delete uri("/#{params[:id]}")
+    delete "/#{settings.prefix}/:id/?" do
+      FourStore.delete uri("/#{settings.prefix}/#{params[:id]}")
     end
 
   end
