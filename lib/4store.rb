@@ -76,7 +76,6 @@ module OpenTox
       end
 
       def self.delete uri
-        pute data_uri(uri)
         RestClientWrapper.delete data_uri(uri)
       end
 
