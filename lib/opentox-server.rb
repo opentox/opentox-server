@@ -1,8 +1,7 @@
-require "opentox-client"
+require 'opentox-client'
 require 'rack'
 require 'rack/contrib'
 require 'sinatra'
-require 'sinatra/url_for'
 require 'roo'
 require 'rdf/n3'
 #require File.join(File.dirname(__FILE__),"environment.rb")

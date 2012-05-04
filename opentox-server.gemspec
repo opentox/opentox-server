@@ -24,7 +24,6 @@ Gem::Specification.new do |s|
   s.add_runtime_dependency 'rack-contrib'
   s.add_runtime_dependency 'sinatra'
   s.add_runtime_dependency 'sinatra-contrib'
-  s.add_runtime_dependency 'emk-sinatra-url-for'
   s.add_runtime_dependency 'roo'
   s.add_runtime_dependency 'unicorn'
   s.add_runtime_dependency 'rdf-n3'
