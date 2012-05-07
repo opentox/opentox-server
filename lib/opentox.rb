@@ -1,8 +1,10 @@
 require 'sinatra/base'
 require "sinatra/reloader"
-require File.join(ENV["HOME"],".opentox","config","default.rb")
 
 ENV["RACK_ENV"] ||= "production"
+
+logfile = File.join(ENV['HOME'], ".opentox","log","#{ENV["RACK_ENV"]}.log")
+$logger = OTLogger.new(logfile) 
 
 module OpenTox
 
