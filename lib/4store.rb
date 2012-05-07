@@ -2,8 +2,6 @@ module OpenTox
   module Backend
     class FourStore
 
-      #TODO: catch 4store errors
-
       @@mime_format = {
         "application/rdf+xml" => :rdfxml,
         "text/turtle" => :turtle,
@@ -14,7 +12,6 @@ module OpenTox
         #"text/x-yaml" => :yaml,
         #"text/yaml" => :yaml,
         "text/html" => :html,
-        # TODO: forms
         #/sparql/ => :sparql #removed to prevent sparql injections
       }
 
@@ -30,7 +27,6 @@ module OpenTox
 
       @@accept_formats = [:rdfxml, :turtle, :ntriples, :uri_list, :html] #, :json, :yaml]
       @@content_type_formats = [:rdfxml, :turtle, :ntriples]#, :json, :yaml]
-      @@rdf_formats  = [:rdfxml, :turtle, :ntriples]
 
       def self.list mime_type
         mime_type = "text/html" if mime_type.match(%r{\*/\*})
@@ -51,26 +47,23 @@ module OpenTox
         query sparql, mime_type
       end
 
-      # TODO: add created at, modified at statements, submitter?
-
       def self.post uri, rdf, mime_type
-        bad_request_error "'#{mime_type}' is not a supported content type. Please use one of #{@@content_type_formats.collect{|f| @@format_mime[f]}.join(", ")}." unless @@content_type_formats.include? @@mime_format[mime_type]
-        rdf = convert rdf, @@mime_format[mime_type], :ntriples#, uri unless mime_type == 'text/plain'
+        bad_request_error "'#{mime_type}' is not a supported content type. Please use one of #{@@content_type_formats.collect{|f| @@format_mime[f]}.join(", ")}." unless @@content_type_formats.include? @@mime_format[mime_type] or mime_type == "multipart/form-data"
+        rdf = convert rdf, @@mime_format[mime_type], :ntriples
+        rdf = "<#{uri}> <#{RDF.type}> <#{klass}>." unless rdf # create empty resource
+        rdf += "\n<#{uri}> <#{RDF::DC.date}> \"#{DateTime.now}\"." unless rdf.match(%r{#{RDF::DC.date}})
         RestClient.post File.join(four_store_uri,"data")+"/", :data => rdf, :graph => uri, "mime-type" => "application/x-turtle" # not very consistent in 4store
       end
 
       def self.put uri, rdf, mime_type, skip_rewrite=false
         bad_request_error "'#{mime_type}' is not a supported content type. Please use one of #{@@content_type_formats.collect{|f| @@format_mime[f]}.join(", ")}." unless @@content_type_formats.include? @@mime_format[mime_type]
+        bad_request_error "Reqest body empty." unless rdf # create empty resource
         uuid = uri.sub(/\/$/,'').split('/').last
         bad_request_error "'#{uri}' is not a valid URI." unless uuid =~ /[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}/
         if !skip_rewrite
           rdf = convert rdf, @@mime_format[mime_type], :ntriples, uri 
         elsif mime_type != "text/plain" # ntriples are not converted
           rdf = convert rdf, @@mime_format[mime_type], :ntriples
-        end
-        unless rdf # create empty resource
-          rdf = "<#{uri}> <#{RDF.type}> <#{klass}>."
-          rdf += "\n<#{uri}> <#{RDF::DC.date}> \"#{DateTime.now}\"."
         end
         RestClient.put File.join(four_store_uri,"data",uri), rdf, :content_type => "application/x-turtle" # content-type not very consistent in 4store
       end
@@ -81,13 +74,10 @@ module OpenTox
 
       def self.update sparql
         RestClient.post(update_uri, :update => sparql )
-        #RestClient.get(update_uri, :params => { :update => sparql })
       end
 
       def self.query sparql, mime_type
         if sparql =~ /SELECT/i
-          #puts sparql_uri
-          #puts sparql
           list = RestClient.get(sparql_uri, :params => { :query => sparql }, :accept => "text/plain").body.gsub(/<|>/,'').split("\n") 
           list.shift
           return list unless mime_type
@@ -180,6 +170,7 @@ module OpenTox
       end
 
       def self.four_store_uri
+        # TODO remove credentials from URI 9security risk in tasks)
         $four_store[:uri].sub(%r{//},"//#{$four_store[:user]}:#{$four_store[:password]}@")
       end
 

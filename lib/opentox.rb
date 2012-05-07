@@ -17,7 +17,6 @@ module OpenTox
     set :raise_errors, false
     set :show_exceptions, false
     set :static, false
-    set :prefix, SERVICE
 
     configure :development do
       register Sinatra::Reloader
@@ -25,7 +24,19 @@ module OpenTox
 
     before do
       request.content_type ? response['Content-Type'] = request.content_type : response['Content-Type'] = request.env['HTTP_ACCEPT']
-      @prefix = "task"
+      parse_input if request.request_method =~ /POST|PUT/
+    end
+
+    helpers do
+      def parse_input
+        if request.content_type == "multipart/form-data"
+          @body = File.read(params[:file][:tempfile])
+          @content_type = params[:file][:type]
+        else
+          @body = request.body.read
+          @content_type = request.content_type
+        end
+      end
     end
 
     # Attention: Error within tasks are catched by Task.create
@@ -46,38 +57,36 @@ module OpenTox
     # see http://jcalcote.wordpress.com/2008/10/16/put-or-post-the-rest-of-the-story/
 
     # Get a list of objects at the server
-    get "/#{settings.prefix}/?" do
+    get "/#{SERVICE}/?" do
       FourStore.list request.env['HTTP_ACCEPT']
     end
 
     # Create a new resource
-    # TODO: handle multipart uploads
-    post "/#{settings.prefix}/?" do
-      rdf = request.body.read
-      uri = uri("/#{settings.prefix}/#{SecureRandom.uuid}")
-      FourStore.put(uri, rdf, request.content_type) unless rdf == ''
+    post "/#{SERVICE}/?" do
+      uri = uri("/#{SERVICE}/#{SecureRandom.uuid}")
+      FourStore.post(uri, @body, @content_type)
       response['Content-Type'] = "text/uri-list"
       uri
     end
 
     # Get resource representation
-    get "/#{settings.prefix}/id/?" do
-      FourStore.get(uri("/#{settings.prefix}/#{params[:id]}"), request.env['HTTP_ACCEPT'])
+    get "/#{SERVICE}/id/?" do
+      FourStore.get(uri("/#{SERVICE}/#{params[:id]}"), request.env['HTTP_ACCEPT'])
     end
 
     # Modify (i.e. add rdf statments to) a resource
-    post "/#{settings.prefix}/:id/?" do
-      FourStore.post uri("/#{settings.prefix}/#{params[:id]}"), request.body.read, request.content_type
+    post "/#{SERVICE}/:id/?" do
+      FourStore.post uri("/#{SERVICE}/#{params[:id]}"), @body, @content_type
     end
 
     # Create or updata a resource
-    put "/#{settings.prefix}/:id/?" do
-      FourStore.put uri("/#{settings.prefix}/#{params[:id]}"), request.body.read, request.content_type
+    put "/#{SERVICE}/:id/?" do
+      FourStore.put uri("/#{SERVICE}/#{params[:id]}"), @body, @content_type
     end
 
     # Delete a resource
-    delete "/#{settings.prefix}/:id/?" do
-      FourStore.delete uri("/#{settings.prefix}/#{params[:id]}")
+    delete "/#{SERVICE}/:id/?" do
+      FourStore.delete uri("/#{SERVICE}/#{params[:id]}")
     end
 
   end
