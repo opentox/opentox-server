@@ -3,7 +3,7 @@ $:.push File.expand_path("../lib", __FILE__)
 
 Gem::Specification.new do |s|
   s.name        = "opentox-server"
-  s.version     = "0.0.2pre"
+  s.version     = "0.0.3"
   s.authors     = ["Christoph Helma, Martin Guetlein, Andreas Maunz, Micha Rautenberg, David Vorgrimmler"]
   s.email       = ["helma@in-silico.ch"]
   s.homepage    = "http://github.com/opentox/opentox-server"
@@ -24,7 +24,7 @@ Gem::Specification.new do |s|
   s.add_runtime_dependency 'rack-contrib'
   s.add_runtime_dependency 'sinatra'
   s.add_runtime_dependency 'sinatra-contrib'
-  s.add_runtime_dependency 'emk-sinatra-url-for'
   s.add_runtime_dependency 'roo'
   s.add_runtime_dependency 'unicorn'
+  s.add_runtime_dependency 'rdf-n3'
 end
