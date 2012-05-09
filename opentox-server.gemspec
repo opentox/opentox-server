@@ -3,7 +3,7 @@ $:.push File.expand_path("../lib", __FILE__)
 
 Gem::Specification.new do |s|
   s.name        = "opentox-server"
-  s.version     = "0.0.2pre"
+  s.version     = "0.0.3"
   s.authors     = ["Christoph Helma, Martin Guetlein, Andreas Maunz, Micha Rautenberg, David Vorgrimmler"]
   s.email       = ["helma@in-silico.ch"]
   s.homepage    = "http://github.com/opentox/opentox-server"
