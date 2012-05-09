@@ -70,7 +70,7 @@ module OpenTox
     end
 
     # Get resource representation
-    get "/#{SERVICE}/id/?" do
+    get "/#{SERVICE}/:id/?" do
       FourStore.get(uri("/#{SERVICE}/#{params[:id]}"), request.env['HTTP_ACCEPT'])
     end
 
