@@ -64,13 +64,13 @@ module OpenTox
     # Create a new resource
     post "/#{SERVICE}/?" do
       uri = uri("/#{SERVICE}/#{SecureRandom.uuid}")
-      FourStore.post(uri, @body, @content_type)
+      FourStore.put(uri, @body, @content_type)
       response['Content-Type'] = "text/uri-list"
       uri
     end
 
     # Get resource representation
-    get "/#{SERVICE}/id/?" do
+    get "/#{SERVICE}/:id/?" do
       FourStore.get(uri("/#{SERVICE}/#{params[:id]}"), request.env['HTTP_ACCEPT'])
     end
 

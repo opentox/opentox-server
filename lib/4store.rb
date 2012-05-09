@@ -122,6 +122,7 @@ module OpenTox
       end
 
       def self.available? uri
+        #sparql = "SELECT DISTINCT ?s WHERE {GRAPH <#{uri}> {?s ?p ?o} }"
         sparql = "SELECT DISTINCT ?s WHERE {GRAPH <#{uri}> {?s <#{RDF.type}> <#{klass}>} }"
         r = query(sparql, nil)
         r.size == 1 and r.first == uri
