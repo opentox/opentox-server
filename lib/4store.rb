@@ -13,6 +13,7 @@ module OpenTox
         #"text/yaml" => :yaml,
         "text/html" => :html,
         #/sparql/ => :sparql #removed to prevent sparql injections
+        'application/sparql-results+xml' => :sparql
       }
 
       @@format_mime = {
@@ -23,9 +24,10 @@ module OpenTox
         #:json => "application/json",
         #:yaml => "text/yaml",
         :html => "text/html",
+        :sparql => 'application/sparql-results+xml'
       }
 
-      @@accept_formats = [:rdfxml, :turtle, :ntriples, :uri_list, :html] #, :json, :yaml]
+      @@accept_formats = [:rdfxml, :turtle, :ntriples, :uri_list, :html, :sparql] #, :json, :yaml]
       @@content_type_formats = [:rdfxml, :turtle, :ntriples]#, :json, :yaml]
 
       def self.list mime_type
@@ -78,6 +80,7 @@ module OpenTox
 
       def self.query sparql, mime_type
         if sparql =~ /SELECT/i
+          return RestClient.get(sparql_uri, :params => { :query => sparql }, :accept => mime_type).body.gsub(/<|>/,'').split("\n") if mime_type == 'application/sparql-results+xml' 
           list = RestClient.get(sparql_uri, :params => { :query => sparql }, :accept => "text/plain").body.gsub(/<|>/,'').split("\n") 
           list.shift
           return list unless mime_type
@@ -185,24 +188,6 @@ module OpenTox
       def self.data_uri uri
         File.join(four_store_uri, "data","?graph=#{uri}")
       end
-
-=begin
-      def self.parse_sparql_xml_results(xml)
-        results = []
-        doc = REXML::Document.new(REXML::Source.new(xml))
-        doc.elements.each("*/results/result") do |result|
-          result_hash = {}
-          result.elements.each do |binding|
-            key = binding.attributes["name"]
-            value = binding.elements[1].text
-            type = binding.elements[1].name 
-            result_hash[key] = value
-          end
-          results.push result_hash
-        end
-        results
-      end
-=end
 
     end
   end
