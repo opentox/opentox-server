@@ -67,7 +67,7 @@ module OpenTox
       # @param [String]subjectid
       def authorized?(subjectid)
         request_method = request.env['REQUEST_METHOD']
-        uri = clean_uri("#{request.env['rack.url_scheme']}://#{request.env['HTTP_HOST']}#{request.env['REQUEST_URI']}").sub("http://","https://")
+        uri = clean_uri("#{request.env['rack.url_scheme']}://#{request.env['HTTP_HOST']}#{request.env['REQUEST_URI']}")    #.sub("http://","https://")
         request_method = "GET" if request_method == "POST" &&  uri =~ /\/model\/\d+\/?$/
         return OpenTox::Authorization.authorized?(uri, request_method, subjectid)
       end
