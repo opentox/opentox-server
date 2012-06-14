@@ -122,7 +122,6 @@ module OpenTox
       end
 
       def self.available? uri
-        #sparql = "SELECT DISTINCT ?s WHERE {GRAPH <#{uri}> {?s ?p ?o} }"
         sparql = "SELECT DISTINCT ?s WHERE {GRAPH <#{uri}> {?s <#{RDF.type}> <#{klass}>} }"
         r = query(sparql, nil)
         r.size == 1 and r.first == uri
@@ -144,7 +143,10 @@ module OpenTox
         end
         bad_request_error "No class specified with <#{RDF.type}> statement." unless subject
         statements.each do |statement|
-          statement.subject = RDF::URI.new rewrite_uri if rewrite_uri and statement.subject == subject
+          if rewrite_uri 
+            statement.subject = RDF::URI.new rewrite_uri if statement.subject.to_s == subject
+            statement.object = RDF::URI.new rewrite_uri if statement.predicate == RDF::XSD.anyURI
+          end
           rdf << statement
         end
         rdf
