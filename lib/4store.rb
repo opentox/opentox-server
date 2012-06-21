@@ -82,8 +82,8 @@ module OpenTox
         if sparql =~ /SELECT/i
           return RestClient.get(sparql_uri, :params => { :query => sparql }, :accept => mime_type).body.gsub(/<|>/,'').split("\n") if mime_type == 'application/sparql-results+xml' 
           list = RestClient.get(sparql_uri, :params => { :query => sparql }, :accept => "text/plain").body.gsub(/<|>/,'').split("\n")
-          h = `hostname -f`.strip
-          list.keep_if{|v| v =~ /#{h}\/#{SERVICE}/} 
+          h = `hostname`.strip
+          list.keep_if{|v| v =~ /#{h}\./} 
           return list unless mime_type
           case mime_type
           when /json/
