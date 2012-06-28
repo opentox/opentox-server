@@ -29,8 +29,9 @@ module OpenTox
 
     helpers do
       def parse_input
-        if request.content_type == "multipart/form-data"
-          @body = File.read(params[:file][:tempfile])
+        case request.content_type 
+        when /multipart/
+          @body = params[:file][:tempfile].read
           @content_type = params[:file][:type]
         else
           @body = request.body.read
@@ -64,10 +65,6 @@ module OpenTox
     # Create a new resource
     post "/#{SERVICE}/?" do
       uri = uri("/#{SERVICE}/#{SecureRandom.uuid}")
-      if @content_type =~ /multipart/
-        @body = params[:file][:tempfile].read
-        @content_type = params[:file][:type]
-      end
       FourStore.put(uri, @body, @content_type)
       response['Content-Type'] = "text/uri-list"
       uri
