@@ -25,6 +25,7 @@ module OpenTox
     before do
       request.content_type ? response['Content-Type'] = request.content_type : response['Content-Type'] = request.env['HTTP_ACCEPT']
       parse_input if request.request_method =~ /POST|PUT/
+      @accept = request.env['HTTP_ACCEPT']
     end
 
     helpers do
@@ -59,7 +60,7 @@ module OpenTox
 
     # Get a list of objects at the server
     get "/#{SERVICE}/?" do
-      FourStore.list request.env['HTTP_ACCEPT']
+      FourStore.list @accept
     end
 
     # Create a new resource
@@ -72,7 +73,7 @@ module OpenTox
 
     # Get resource representation
     get "/#{SERVICE}/:id/?" do
-      FourStore.get(uri("/#{SERVICE}/#{params[:id]}"), request.env['HTTP_ACCEPT'])
+      FourStore.get(uri("/#{SERVICE}/#{params[:id]}"), @accept)
     end
 
     # Modify (i.e. add rdf statments to) a resource
@@ -82,6 +83,8 @@ module OpenTox
 
     # Create or updata a resource
     put "/#{SERVICE}/:id/?" do
+      #puts @body
+      #puts @content_type
       FourStore.put uri("/#{SERVICE}/#{params[:id]}"), @body, @content_type
     end
 
