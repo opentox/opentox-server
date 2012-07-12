@@ -27,5 +27,4 @@ Gem::Specification.new do |s|
   s.add_runtime_dependency 'roo'
   s.add_runtime_dependency 'spreadsheet', "= 0.6.8" # cannot load 0.7.0
   s.add_runtime_dependency 'unicorn'
-  s.add_runtime_dependency 'rdf-n3'
 end

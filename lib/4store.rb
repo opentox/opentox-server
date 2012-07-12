@@ -2,43 +2,23 @@ module OpenTox
   module Backend
     class FourStore
 
-      # TODO: simplify
-      @@mime_format = {
-        "application/rdf+xml" => :rdfxml,
-        "text/turtle" => :turtle,
-        "text/plain" => :ntriples,
-        "text/uri-list" => :uri_list,
-        "text/html" => :html,
-        'application/sparql-results+xml' => :sparql
-      }
+      @@accept_formats = [ "application/rdf+xml", "text/turtle", "text/plain", "text/uri-list", "text/html", 'application/sparql-results+xml' ]
+      @@content_type_formats = [ "application/rdf+xml", "text/turtle", "text/plain" ]
 
-      @@format_mime = {
-        :rdfxml => "application/rdf+xml", 
-        :turtle => "text/turtle",
-        :ntriples => "text/plain",
-        :uri_list => "text/uri-list",
-        :html => "text/html",
-        :sparql => 'application/sparql-results+xml'
-      }
-
-      @@accept_formats = [:rdfxml, :turtle, :ntriples, :uri_list, :html, :sparql] 
-      @@content_type_formats = [:rdfxml, :turtle, :ntriples]
-
-      def self.list mime_type
+      def self.list service_uri, mime_type
         mime_type = "text/html" if mime_type.match(%r{\*/\*})
+        bad_request_error "'#{mime_type}' is not a supported mime type. Please specify one of #{@@accept_formats.join(", ")} in the Accept Header." unless @@accept_formats.include? mime_type
         if mime_type =~ /uri-list/
-          sparql = "SELECT DISTINCT ?g WHERE {GRAPH ?g {?s ?p ?o} }"
-        elsif mime_type =~ /turtle|html|rdf|plain/
-          sparql = "CONSTRUCT {?s ?p ?o.} WHERE {?s <#{RDF.type}> <#{klass}>; ?p ?o. }"
-        else
-          bad_request_error "'#{mime_type}' is not a supported mime type. Please specify one of #{@@accept_formats.collect{|f| @@format_mime[f]}.join(", ")} in the Accept Header." #unless @@accept_formats.include? @@mime_format[mime_type]
+          sparql = "SELECT DISTINCT ?g WHERE {GRAPH ?g {?g <#{RDF.type}> <#{klass}>; ?p ?o. } }"
+        else 
+          sparql = "CONSTRUCT {?s ?p ?o.} FROM WHERE {?s <#{RDF.type}> <#{klass}>; ?p ?o. }"
         end
         query sparql, mime_type
       end
 
       def self.get uri, mime_type
         mime_type = "text/html" if mime_type.match(%r{\*/\*})
-        bad_request_error "'#{mime_type}' is not a supported mime type. Please specify one of #{@@accept_formats.collect{|f| @@format_mime[f]}.join(", ")} in the Accept Header." unless @@accept_formats.include? @@mime_format[mime_type]
+        bad_request_error "'#{mime_type}' is not a supported mime type. Please specify one of #{@@accept_formats.join(", ")} in the Accept Header." unless @@accept_formats.include? mime_type
         sparql = "CONSTRUCT {?s ?p ?o.} FROM <#{uri}> WHERE { ?s ?p ?o. }"
         rdf = query sparql, mime_type
         not_found_error "#{uri} not found." if rdf.empty?
@@ -46,17 +26,17 @@ module OpenTox
       end
 
       def self.post uri, rdf, mime_type
-        bad_request_error "'#{mime_type}' is not a supported content type. Please use one of #{@@content_type_formats.collect{|f| @@format_mime[f]}.join(", ")}." unless @@content_type_formats.include? @@mime_format[mime_type] or mime_type == "multipart/form-data"
+        bad_request_error "'#{mime_type}' is not a supported content type. Please use one of #{@@content_type_formats.join(", ")}." unless @@content_type_formats.include? mime_type or mime_type == "multipart/form-data"
         bad_request_error "Reqest body empty." unless rdf 
         mime_type = "application/x-turtle" if mime_type == "text/plain" # ntriples is turtle in 4store
         RestClient.post File.join(four_store_uri,"data")+"/", :data => rdf, :graph => uri, "mime-type" => mime_type 
       end
 
-      def self.put uri, rdf, mime_type, skip_rewrite=false
-        bad_request_error "'#{mime_type}' is not a supported content type. Please use one of #{@@content_type_formats.collect{|f| @@format_mime[f]}.join(", ")}." unless @@content_type_formats.include? @@mime_format[mime_type]
+      def self.put uri, rdf, mime_type
+        bad_request_error "'#{mime_type}' is not a supported content type. Please use one of #{@@content_type_formats.join(", ")}." unless @@content_type_formats.include? mime_type
         bad_request_error "Reqest body empty." unless rdf 
         mime_type = "application/x-turtle" if mime_type == "text/plain"
-        RestClient.put File.join(four_store_uri,"data",uri), rdf, :content_type => mime_type # content-type not very consistent in 4store
+        RestClient.put File.join(four_store_uri,"data",uri), rdf, :content_type => mime_type 
       end
 
       def self.delete uri
@@ -90,7 +70,7 @@ module OpenTox
               reader.each_statement { |statement| rdf << statement }
             end
             prefixes = {:rdf => "http://www.w3.org/1999/02/22-rdf-syntax-ns#type"}
-            ['OT', 'DC', 'XSD'].each{|p| prefixes[p.downcase.to_sym] = eval("RDF::#{p}.to_s") }
+            ['OT', 'DC', 'XSD', 'OLO'].each{|p| prefixes[p.downcase.to_sym] = eval("RDF::#{p}.to_s") }
             turtle = RDF::N3::Writer.for(:turtle).buffer(:prefixes => prefixes)  do |writer|
               rdf.each{|statement| writer << statement}
             end

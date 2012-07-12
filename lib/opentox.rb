@@ -28,12 +28,18 @@ module OpenTox
       @accept = request.env['HTTP_ACCEPT']
     end
 
+    before "/#{SERVICE}/:id" do
+      @uri = uri("/#{SERVICE}/#{params[:id]}")
+    end
+
     helpers do
       def parse_input
         case request.content_type 
         when /multipart/
           @body = params[:file][:tempfile].read
+          # sdf files are incorrectly detected
           @content_type = params[:file][:type]
+          @content_type = "chemical/x-mdl-sdfile" if File.extname(params[:file][:filename]) == ".sdf"
         else
           @body = request.body.read
           @content_type = request.content_type
@@ -60,37 +66,35 @@ module OpenTox
 
     # Get a list of objects at the server
     get "/#{SERVICE}/?" do
-      FourStore.list @accept
+      FourStore.list uri("/#{SERVICE}"), @accept
     end
 
     # Create a new resource
     post "/#{SERVICE}/?" do
-      uri = uri("/#{SERVICE}/#{SecureRandom.uuid}")
-      FourStore.put(uri, @body, @content_type)
+      @uri = uri("/#{SERVICE}/#{SecureRandom.uuid}")
+      FourStore.put(@uri, @body, @content_type)
       response['Content-Type'] = "text/uri-list"
-      uri
+      @uri
     end
 
     # Get resource representation
     get "/#{SERVICE}/:id/?" do
-      FourStore.get(uri("/#{SERVICE}/#{params[:id]}"), @accept)
+      FourStore.get(@uri, @accept)
     end
 
     # Modify (i.e. add rdf statments to) a resource
     post "/#{SERVICE}/:id/?" do
-      FourStore.post uri("/#{SERVICE}/#{params[:id]}"), @body, @content_type
+      FourStore.post @uri, @body, @content_type
     end
 
     # Create or updata a resource
     put "/#{SERVICE}/:id/?" do
-      #puts @body
-      #puts @content_type
-      FourStore.put uri("/#{SERVICE}/#{params[:id]}"), @body, @content_type
+      FourStore.put @uri, @body, @content_type
     end
 
     # Delete a resource
     delete "/#{SERVICE}/:id/?" do
-      FourStore.delete uri("/#{SERVICE}/#{params[:id]}")
+      FourStore.delete @uri
     end
 
   end
