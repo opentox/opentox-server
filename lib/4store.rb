@@ -29,14 +29,22 @@ module OpenTox
         bad_request_error "'#{mime_type}' is not a supported content type. Please use one of #{@@content_type_formats.join(", ")}." unless @@content_type_formats.include? mime_type or mime_type == "multipart/form-data"
         bad_request_error "Reqest body empty." unless rdf 
         mime_type = "application/x-turtle" if mime_type == "text/plain" # ntriples is turtle in 4store
-        RestClient.post File.join(four_store_uri,"data")+"/", :data => rdf, :graph => uri, "mime-type" => mime_type 
+        begin
+          RestClient.post File.join(four_store_uri,"data")+"/", :data => rdf, :graph => uri, "mime-type" => mime_type 
+        rescue
+          rest_call_error $!.message, File.join(four_store_uri,"data")+"/"
+        end
       end
 
       def self.put uri, rdf, mime_type
         bad_request_error "'#{mime_type}' is not a supported content type. Please use one of #{@@content_type_formats.join(", ")}." unless @@content_type_formats.include? mime_type
         bad_request_error "Reqest body empty." unless rdf 
         mime_type = "application/x-turtle" if mime_type == "text/plain"
-        RestClient.put File.join(four_store_uri,"data",uri), rdf, :content_type => mime_type 
+        begin
+          RestClient.put File.join(four_store_uri,"data",uri), rdf, :content_type => mime_type 
+        rescue
+          rest_call_error $!.message, File.join(four_store_uri,"data",uri)
+        end
       end
 
       def self.delete uri
@@ -49,9 +57,6 @@ module OpenTox
 
       def self.query sparql, mime_type
         if sparql =~ /SELECT/i
-#         return RestClient.get(sparql_uri, :params => { :query => sparql }, :accept => mime_type).body.gsub(/<|>/,'').split("\n") if mime_type == 'application/sparql-results+xml' 
-#         list = RestClient.get(sparql_uri, :params => { :query => sparql }, :accept => "text/plain").body.gsub(/<|>/,'').split("\n")
-#         list.shift 
 #         return list unless mime_type
           case mime_type
           when 'application/sparql-results+xml' 
@@ -75,6 +80,7 @@ module OpenTox
             end
             prefixes = {:rdf => "http://www.w3.org/1999/02/22-rdf-syntax-ns#type"}
             ['OT', 'DC', 'XSD', 'OLO'].each{|p| prefixes[p.downcase.to_sym] = eval("RDF::#{p}.to_s") }
+            # TODO: fails for large datasets?? multi_cell_call
             turtle = RDF::N3::Writer.for(:turtle).buffer(:prefixes => prefixes)  do |writer|
               rdf.each{|statement| writer << statement}
             end
@@ -85,6 +91,8 @@ module OpenTox
           # TODO: check if this prevents SPARQL injections
           bad_request_error "Only SELECT and CONSTRUCT are accepted SPARQL statements."
         end
+      rescue
+        rest_call_error $!.message, sparql_uri
       end
 
       def self.klass

@@ -14,8 +14,6 @@ Gem::Specification.new do |s|
   s.rubyforge_project = "opentox-server"
 
   s.files         = `git ls-files`.split("\n")
-  s.test_files    = `git ls-files -- {test,spec,features}/*`.split("\n")
-  s.executables   = `git ls-files -- bin/*`.split("\n").map{ |f| File.basename(f) }
   s.require_paths = ["lib"]
 
   # specify any dependencies here; for example:
@@ -24,7 +22,5 @@ Gem::Specification.new do |s|
   s.add_runtime_dependency 'rack-contrib'
   s.add_runtime_dependency 'sinatra'
   s.add_runtime_dependency 'sinatra-contrib'
-  s.add_runtime_dependency 'roo'
-  s.add_runtime_dependency 'spreadsheet', "= 0.6.8" # cannot load 0.7.0
   s.add_runtime_dependency 'unicorn'
 end
