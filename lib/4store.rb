@@ -9,7 +9,7 @@ module OpenTox
         mime_type = "text/html" if mime_type.match(%r{\*/\*})
         bad_request_error "'#{mime_type}' is not a supported mime type. Please specify one of #{@@accept_formats.join(", ")} in the Accept Header." unless @@accept_formats.include? mime_type
         if mime_type =~ /uri-list/
-          sparql = "SELECT DISTINCT ?g WHERE {GRAPH ?g {?g <#{RDF.type}> <#{klass}>; ?p ?o. } }"
+          sparql = "SELECT DISTINCT ?g WHERE {GRAPH ?g {?s <#{RDF.type}> <#{klass}>; ?p ?o. } }"
         else 
           sparql = "CONSTRUCT {?s ?p ?o.} FROM WHERE {?s <#{RDF.type}> <#{klass}>; ?p ?o. }"
         end
