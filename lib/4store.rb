@@ -21,7 +21,7 @@ module OpenTox
         bad_request_error "'#{mime_type}' is not a supported mime type. Please specify one of #{@@accept_formats.join(", ")} in the Accept Header." unless @@accept_formats.include? mime_type
         sparql = "CONSTRUCT {?s ?p ?o.} FROM <#{uri}> WHERE { ?s ?p ?o. }"
         rdf = query sparql, mime_type
-        not_found_error "#{uri} not found." if rdf.empty?
+        resource_not_found_error "#{uri} not found." if rdf.empty?
         rdf
       end
 
@@ -99,41 +99,8 @@ module OpenTox
         RDF::OT[SERVICE.capitalize]
       end
 
-=begin
-      def self.available? uri
-        sparql = "SELECT DISTINCT ?s WHERE {GRAPH <#{uri}> {?s <#{RDF.type}> <#{klass}>} }"
-        r = query(sparql, nil)
-        r.size == 1 and r.first == uri
-      end
-
-      def self.convert rdf_string, input_format, output_format, rewrite_uri=nil
-        rewrite_uri ?  serialize(parse_and_rewrite_uri(rdf_string,input_format, rewrite_uri), output_format) : serialize(parse(rdf_string,input_format), output_format)
-      end
-
-      def self.parse_and_rewrite_uri string, format, rewrite_uri
-        rdf = RDF::Graph.new
-        subject = nil
-        statements = [] # use array instead of graph for performance reasons
-        RDF::Reader.for(format).new(string) do |reader|
-          reader.each_statement do |statement|
-            subject = statement.subject if statement.predicate == RDF.type and statement.object == klass
-            statements << statement
-          end 
-        end
-        bad_request_error "No class specified with <#{RDF.type}> statement." unless subject
-        statements.each do |statement|
-          if rewrite_uri 
-            statement.subject = RDF::URI.new rewrite_uri if statement.subject.to_s == subject
-            statement.object = RDF::URI.new rewrite_uri if statement.predicate == RDF::XSD.anyURI
-          end
-          rdf << statement
-        end
-        rdf
-      end
-=end
-
       def self.four_store_uri
-        # TODO remove credentials from URI 9security risk in tasks)
+        # credentials are removed from uri in error.rb
         $four_store[:uri].sub(%r{//},"//#{$four_store[:user]}:#{$four_store[:password]}@")
       end
 
