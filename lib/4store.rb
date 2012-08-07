@@ -93,7 +93,7 @@ module OpenTox
         end
       #rescue
         #rest_call_error $!.message, sparql_uri
-      #end
+      end
 
       def self.klass
         RDF::OT[SERVICE.capitalize]
