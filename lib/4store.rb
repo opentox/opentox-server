@@ -11,7 +11,7 @@ module OpenTox
         if mime_type =~ /uri-list/
           sparql = "SELECT DISTINCT ?g WHERE {GRAPH ?g {?s <#{RDF.type}> <#{klass}>; ?p ?o. } }"
         else 
-          sparql = "CONSTRUCT {?s ?p ?o.} FROM WHERE {?s <#{RDF.type}> <#{klass}>; ?p ?o. }"
+          sparql = "CONSTRUCT {?s ?p ?o.} WHERE {?s <#{RDF.type}> <#{klass}>; ?p ?o. }"
         end
         query sparql, mime_type
       end
