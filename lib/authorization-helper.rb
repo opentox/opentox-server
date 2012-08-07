@@ -56,10 +56,10 @@ module OpenTox
         elsif !env["session"] && subjectid
           unless authorized?(subjectid)
             $logger.debug "URI not authorized: clean: " + clean_uri("#{request.env['rack.url_scheme']}://#{request.env['HTTP_HOST']}#{request.env['REQUEST_URI']}").sub("http://","https://").to_s + " full: #{request.env['rack.url_scheme']}://#{request.env['HTTP_HOST']}#{request.env['REQUEST_URI']} with request: #{request.env['REQUEST_METHOD']}"
-            raise OpenTox::NotAuthorizedError.new "Not authorized"
+            unauthorized_error "Not authorized"
           end
         else
-          raise OpenTox::NotAuthorizedError.new "Not authorized" unless authorized?(subjectid)
+          unauthorized_error "Not authorized" unless authorized?(subjectid)
         end
       end
 
