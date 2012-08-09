@@ -1,7 +1,8 @@
 require 'sinatra/base'
 ENV["RACK_ENV"] ||= "production"
 require "sinatra/reloader" if ENV["RACK_ENV"] == "development"
-require File.join(ENV["HOME"],".opentox","config","#{SERVICE}.rb")
+require File.join(ENV["HOME"],".opentox","config","default.rb")
+require File.join(ENV["HOME"],".opentox","config","#{SERVICE}.rb") if File.exist?(File.join(ENV["HOME"],".opentox","config","#{SERVICE}.rb"))
 
 
 logfile = File.join(ENV['HOME'], ".opentox","log","#{ENV["RACK_ENV"]}.log")
