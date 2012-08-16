@@ -11,7 +11,7 @@ module OpenTox
         if mime_type =~ /uri-list/
           sparql = "SELECT DISTINCT ?g WHERE {GRAPH ?g {?s <#{RDF.type}> <#{klass}>; ?p ?o. } }"
         else 
-          sparql = "CONSTRUCT {?s ?p ?o.} FROM WHERE {?s <#{RDF.type}> <#{klass}>; ?p ?o. }"
+          sparql = "CONSTRUCT {?s ?p ?o.} WHERE {?s <#{RDF.type}> <#{klass}>; ?p ?o. }"
         end
         query sparql, mime_type
       end
@@ -29,22 +29,22 @@ module OpenTox
         bad_request_error "'#{mime_type}' is not a supported content type. Please use one of #{@@content_type_formats.join(", ")}." unless @@content_type_formats.include? mime_type or mime_type == "multipart/form-data"
         bad_request_error "Reqest body empty." unless rdf 
         mime_type = "application/x-turtle" if mime_type == "text/plain" # ntriples is turtle in 4store
-        begin
+        #begin
           RestClient.post File.join(four_store_uri,"data")+"/", :data => rdf, :graph => uri, "mime-type" => mime_type 
-        rescue
-          rest_call_error $!.message, File.join(four_store_uri,"data")+"/"
-        end
+        #rescue
+          #rest_call_error $!.message, File.join(four_store_uri,"data")+"/"
+        #end
       end
 
       def self.put uri, rdf, mime_type
         bad_request_error "'#{mime_type}' is not a supported content type. Please use one of #{@@content_type_formats.join(", ")}." unless @@content_type_formats.include? mime_type
         bad_request_error "Reqest body empty." unless rdf 
         mime_type = "application/x-turtle" if mime_type == "text/plain"
-        begin
+        #begin
           RestClient.put File.join(four_store_uri,"data",uri), rdf, :content_type => mime_type 
-        rescue
-          rest_call_error $!.message, File.join(four_store_uri,"data",uri)
-        end
+        #rescue
+          #rest_call_error $!.message, File.join(four_store_uri,"data",uri)
+        #end
       end
 
       def self.delete uri
@@ -91,8 +91,8 @@ module OpenTox
           # TODO: check if this prevents SPARQL injections
           bad_request_error "Only SELECT and CONSTRUCT are accepted SPARQL statements."
         end
-      rescue
-        rest_call_error $!.message, sparql_uri
+      #rescue
+        #rest_call_error $!.message, sparql_uri
       end
 
       def self.klass
