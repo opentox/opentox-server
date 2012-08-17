@@ -1,6 +1,6 @@
 require 'sinatra/base'
+require "sinatra/reloader" 
 ENV["RACK_ENV"] ||= "production"
-require "sinatra/reloader" if ENV["RACK_ENV"] == "development"
 require File.join(ENV["HOME"],".opentox","config","#{SERVICE}.rb")
 
 
@@ -20,6 +20,9 @@ module OpenTox
 
     configure :development do
       register Sinatra::Reloader
+      also_reload "./*.rb"
+      also_reload "../opentox-client/lib/*.rb"
+      also_reload File.join(ENV["HOME"],".opentox","config","#{SERVICE}.rb")
     end
 
     before do
