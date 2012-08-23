@@ -1,6 +1,7 @@
 require 'sinatra/base'
 require "sinatra/reloader" 
 ENV["RACK_ENV"] ||= "production"
+require File.join(ENV["HOME"],".opentox","config","default.rb") if File.exist? File.join(ENV["HOME"],".opentox","config","default.rb")
 require File.join(ENV["HOME"],".opentox","config","#{SERVICE}.rb")
 
 
