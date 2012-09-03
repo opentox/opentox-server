@@ -6,9 +6,6 @@
 SELF=$(basename $0 -install)
 [ "`id -u`" = "0" ] && echo "This script must be run as non-root." 1>&2 && exit 1
 
-# Adjust ruby version here!
-RUBY_NUM_VER="1.9.3-p194"
-
 echo
 echo "Welcome to service installation (<Return> to continue)."
 read delete_me
@@ -36,6 +33,9 @@ check_log $SELF
 if [ "$OT_BRANCH" = "development" ]; then
   cmd="test -d $OT_PREFIX/opentox-client" && run_cmd "$cmd" "Opentox-client"
 fi
+
+# Adjust ruby version here!
+RUBY_NUM_VER="1.9.3-p194"
 
 # ruby
 install_ruby
