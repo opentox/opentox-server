@@ -17,7 +17,7 @@ module OpenTox
       end
 
       def uri_list
-        Dir["./private/*.nt"].collect{|f| url_for File.basename(f,".nt")}.join("\n")
+        Dir["./private/*.nt"].collect{|f| to(File.basename(f,".nt")}.join("\n"))
       end
     end
 
