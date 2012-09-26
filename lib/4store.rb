@@ -5,7 +5,7 @@ module OpenTox
       @@accept_formats = [ "application/rdf+xml", "text/turtle", "text/plain", "text/uri-list", "text/html", 'application/sparql-results+xml' ]
       @@content_type_formats = [ "application/rdf+xml", "text/turtle", "text/plain" ]
 
-      def self.list service_uri, mime_type
+      def self.list mime_type
         mime_type = "text/html" if mime_type.match(%r{\*/\*})
         bad_request_error "'#{mime_type}' is not a supported mime type. Please specify one of #{@@accept_formats.join(", ")} in the Accept Header." unless @@accept_formats.include? mime_type
         if mime_type =~ /uri-list/

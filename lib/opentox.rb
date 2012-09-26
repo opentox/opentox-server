@@ -70,7 +70,7 @@ module OpenTox
 
     # Get a list of objects at the server
     get "/#{SERVICE}/?" do
-      FourStore.list uri("/#{SERVICE}"), @accept
+      FourStore.list @accept
     end
 
     # Create a new resource
