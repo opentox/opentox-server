@@ -84,7 +84,8 @@ module OpenTox
             turtle = RDF::N3::Writer.for(:turtle).buffer(:prefixes => prefixes)  do |writer|
               rdf.each{|statement| writer << statement}
             end
-            turtle =  "<html><body>" + turtle.gsub(%r{<(.*)>},'&lt;<a href="\1">\1</a>&gt;').gsub(/\n/,'<br/>') + "</body></html>" if mime_type =~ /html/ and !turtle.empty?
+            regex = Regexp.new '(https?:\/\/[\S]+)([>"])'
+            turtle =  "<html><body>" + turtle.gsub( regex, '<a href="\1">\1</a>\2' ).gsub(/\n/,'<br/>') + "</body></html>" if mime_type =~ /html/ and !turtle.empty?
             turtle
           end
         else
