@@ -40,10 +40,12 @@ module OpenTox
       def parse_input
         case request.content_type 
         when /multipart/
-          @body = params[:file][:tempfile].read
-          # sdf files are incorrectly detected
-          @content_type = params[:file][:type]
-          @content_type = "chemical/x-mdl-sdfile" if File.extname(params[:file][:filename]) == ".sdf"
+          if params[:file]
+            @body = params[:file][:tempfile].read
+            # sdf files are incorrectly detected
+            @content_type = params[:file][:type]
+            @content_type = "chemical/x-mdl-sdfile" if File.extname(params[:file][:filename]) == ".sdf"
+          end
         else
           @body = request.body.read
           @content_type = request.content_type
