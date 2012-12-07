@@ -30,6 +30,8 @@ module OpenTox
       request.content_type ? response['Content-Type'] = request.content_type : response['Content-Type'] = request.env['HTTP_ACCEPT']
       parse_input if request.request_method =~ /POST|PUT/
       @accept = request.env['HTTP_ACCEPT']
+      @accept = "text/html" if @accept =~ /\*\/\*/ or request.env["HTTP_USER_AGENT"]=~/MSIE/
+      response['Content-Type'] = @accept
     end
 
     before "/#{SERVICE}/:id" do
@@ -60,8 +62,9 @@ module OpenTox
         body = error.report.to_turtle
       else
         response['Content-Type'] = "text/plain"
-        body = error.message
-        body += "\n#{error.backtrace}"
+        body = "#{error.message}\n"
+        body += "URI: #{error.uri}\n" if error.is_a?(RuntimeError)
+        body += error.backtrace.join("\n")
       end
       error.respond_to?(:http_code) ? code = error.http_code : code = 500
       halt code, body
