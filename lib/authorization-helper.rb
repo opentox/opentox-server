@@ -107,7 +107,7 @@ module OpenTox
       # Get subjectid out of session, params or rack-environment and unescape it if necessary
       # @return [String] subjectid
       def get_subjectid
-        begin
+        #begin
           subjectid = nil
           subjectid = session[:subjectid] if session[:subjectid]
           subjectid = params[:subjectid]  if params[:subjectid] and !subjectid
@@ -115,9 +115,9 @@ module OpenTox
           # see http://rack.rubyforge.org/doc/SPEC.html
           subjectid = CGI.unescape(subjectid) if subjectid.include?("%23")
           @subjectid = subjectid
-        rescue
-          @subjectid = nil
-        end
+        #rescue
+        #  @subjectid = nil
+        #end
       end
 
     end
