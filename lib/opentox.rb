@@ -31,6 +31,7 @@ module OpenTox
       parse_input if request.request_method =~ /POST|PUT/
       @accept = request.env['HTTP_ACCEPT']
       @accept = "text/html" if @accept =~ /\*\/\*/ or request.env["HTTP_USER_AGENT"]=~/MSIE/
+      @accept = request.params["media"] if request.params["media"]
       response['Content-Type'] = @accept
     end
 
@@ -69,12 +70,36 @@ module OpenTox
       error.respond_to?(:http_code) ? code = error.http_code : code = 500
       halt code, body
     end
+    
+    def return_task( task )
+      raise "http_code == nil" unless task.code!=nil
+      case request.env['HTTP_ACCEPT']
+      when /rdf/
+        response['Content-Type'] = "application/rdf+xml"
+        halt task.code,task.to_rdfxml
+      when /yaml/
+        response['Content-Type'] = "application/x-yaml"
+        halt task.code,task.to_yaml # PENDING differs from task-webservice
+      when /html/
+        response['Content-Type'] = "text/html"
+        # html -> task created with html form -> redirect to task uri
+        redirect task.uri 
+      else # default /uri-list/
+        response['Content-Type'] = "text/uri-list"
+        if task.completed?
+          halt task.code,task.resultURI+"\n"
+        else
+          halt task.code,task.uri+"\n"
+        end
+      end
+    end    
 
     # Default methods, may be overwritten by derived services
     # see http://jcalcote.wordpress.com/2008/10/16/put-or-post-the-rest-of-the-story/
 
     # Get a list of objects at the server
     get "/#{SERVICE}/?" do
+      $logger.debug "listing all #{SERVICE} objects"
       FourStore.list @accept
     end
 
