@@ -113,7 +113,7 @@ module OpenTox
           subjectid = params[:subjectid]  if params[:subjectid] and !subjectid
           subjectid = request.env['HTTP_SUBJECTID'] if request.env['HTTP_SUBJECTID'] and !subjectid
           # see http://rack.rubyforge.org/doc/SPEC.html
-          subjectid = CGI.unescape(subjectid) if subjectid.include?("%23")
+          subjectid = CGI.unescape(subjectid) if subjectid and subjectid.include?("%23")
           @subjectid = subjectid
         rescue
           @subjectid = nil
