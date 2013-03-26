@@ -22,21 +22,23 @@ module OpenTox
     configure :development do
       register Sinatra::Reloader
       also_reload "./*.rb"
+      also_reload "./**/*.rb"
       also_reload "../opentox-client/lib/*.rb"
       also_reload File.join(ENV["HOME"],".opentox","config","#{SERVICE}.rb")
     end
 
     before do
+      @uri = uri(request.env['REQUEST_URI'])
+      # fix IE
+      request.env['HTTP_ACCEPT'] += ";text/html" if request.env["HTTP_USER_AGENT"]=~/MSIE/
+      request.env['HTTP_ACCEPT'] = request.params["media"] if request.params["media"]
+
       request.content_type ? response['Content-Type'] = request.content_type : response['Content-Type'] = request.env['HTTP_ACCEPT']
       parse_input if request.request_method =~ /POST|PUT/
       @accept = request.env['HTTP_ACCEPT']
       @accept = "text/html" if @accept =~ /\*\/\*/ or request.env["HTTP_USER_AGENT"]=~/MSIE/
       @accept = request.params["media"] if request.params["media"]
       response['Content-Type'] = @accept
-    end
-
-    before "/#{SERVICE}/:id" do
-      @uri = uri("/#{SERVICE}/#{params[:id]}")
     end
 
     helpers do
@@ -56,7 +58,7 @@ module OpenTox
       end
     end
 
-    # Attention: Error within tasks are catched by Task.create
+    # Attention: Error within tasks are catched by Task.run
     error do
       error = request.env['sinatra.error']
       if error.respond_to? :report
@@ -97,10 +99,18 @@ module OpenTox
     # Default methods, may be overwritten by derived services
     # see http://jcalcote.wordpress.com/2008/10/16/put-or-post-the-rest-of-the-story/
 
-    # Get a list of objects at the server
+    # Get a list of objects at the server or perform a SPARQL query
     get "/#{SERVICE}/?" do
-      $logger.debug "listing all #{SERVICE} objects"
-      FourStore.list @accept
+      if params[:query]
+        case @accept
+        when "text/uri-list" # result URIs are protected by A+A
+          FourStore.query(params[:query], "text/uri-list") 
+        else # prevent searches for protected resources
+          bad_request_error "Accept header '#{@accept}' is disabled for SPARQL queries at service URIs in order to protect private data. Use 'text/uri-list' and repeat the query at the result URIs.", uri("/#{SERVICE}")
+        end
+      else
+        FourStore.list(@accept)
+      end
     end
 
     # Create a new resource
@@ -111,9 +121,9 @@ module OpenTox
       @uri
     end
 
-    # Get resource representation
+    # Get resource representation or perform a SPARQL query
     get "/#{SERVICE}/:id/?" do
-      FourStore.get(@uri, @accept)
+      params[:query] ?  FourStore.query(params[:query], @accept) : FourStore.get(@uri, @accept)
     end
 
     # Modify (i.e. add rdf statments to) a resource
