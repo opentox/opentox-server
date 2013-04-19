@@ -45,7 +45,7 @@ if [ "$OT_BRANCH" = "development" ]; then
 fi
 
 # Adjust ruby version here!
-RUBY_NUM_VER="1.9.3-p194"
+RUBY_NUM_VER="2.0.0-p0"
 
 # ruby
 install_ruby
