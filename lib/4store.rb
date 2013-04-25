@@ -44,9 +44,18 @@ module OpenTox
       end
 
       def self.update sparql
-        RestClient.post(update_uri, :update => sparql )
-      rescue
-        bad_request_error $!.message, update_uri
+        attempts = 0
+        begin
+          attempts += 1
+          RestClient.post(update_uri, :update => sparql )
+        rescue
+          if attempts < 4 # 4store may return errors under heavy load
+            sleep 1
+            retry
+          else
+            bad_request_error $!.message, update_uri
+          end
+        end
       end
 
       def self.query sparql, mime_type
