@@ -117,7 +117,6 @@ module OpenTox
     post "/#{SERVICE}/?" do
       @uri = uri("/#{SERVICE}/#{SecureRandom.uuid}")
       FourStore.put(@uri, @body, @content_type)
-      Authorization.check_policy(@uri, @subjectid) if $aa[:uri]
       response['Content-Type'] = "text/uri-list"
       @uri
     end
@@ -140,7 +139,6 @@ module OpenTox
     # Delete a resource
     delete "/#{SERVICE}/:id/?" do
       FourStore.delete @uri
-      Authorization.delete_policies_from_uri(@uri, @subjectid) if $aa[:uri]
     end
 
   end
