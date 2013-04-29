@@ -29,6 +29,7 @@ module OpenTox
 
     before do
       @uri = uri(request.env['REQUEST_URI'])
+      get_subjectid if respond_to? :get_subjectid
       # fix IE
       request.env['HTTP_ACCEPT'] += ";text/html" if request.env["HTTP_USER_AGENT"]=~/MSIE/
       request.env['HTTP_ACCEPT'] = request.params["media"] if request.params["media"]
@@ -38,8 +39,14 @@ module OpenTox
       @accept = request.env['HTTP_ACCEPT']
       @accept = "text/html" if @accept =~ /\*\/\*/ or request.env["HTTP_USER_AGENT"]=~/MSIE/
       @accept = request.params["media"] if request.params["media"]
+      Authorization.check_policy(@uri, @subjectid) if env['REQUEST_METHOD'] == "PUT" && $aa[:uri]
       response['Content-Type'] = @accept
     end
+
+    after do
+      Authorization.check_policy(@uri, @subjectid) if env['REQUEST_METHOD'].to_s == "POST" && $aa[:uri]
+    end
+
 
     helpers do
       def parse_input
