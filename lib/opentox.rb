@@ -106,6 +106,12 @@ module OpenTox
     # Default methods, may be overwritten by derived services
     # see http://jcalcote.wordpress.com/2008/10/16/put-or-post-the-rest-of-the-story/
 
+    # HEAD route for service check
+    # algorithm, compound and validation overwrite this
+    head "/#{SERVICE}/?" do
+      #$logger.debug "#{SERVICE.capitalize} service is running."
+    end
+
     # Get a list of objects at the server or perform a SPARQL query
     get "/#{SERVICE}/?" do
       if params[:query]
