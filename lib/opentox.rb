@@ -130,7 +130,7 @@ module OpenTox
 
     # Get resource representation or perform a SPARQL query
     get "/#{SERVICE}/:id/?" do
-      params[:query] ?  FourStore.query(params[:query], @accept) : FourStore.get(@uri, @accept)
+      params[:query] ?  FourStore.query(params[:query], @accept) : FourStore.get(@uri.split('?').first, @accept)
     end
 
     # Modify (i.e. add rdf statments to) a resource
