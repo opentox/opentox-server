@@ -15,6 +15,13 @@ module OpenTox
         query sparql, mime_type
       end
 
+      def self.head uri
+        sparql = "SELECT DISTINCT ?g WHERE {GRAPH ?g {<#{uri}> <#{RDF::DC.modified}> ?o.} }"
+        rdf = query sparql, 'application/sparql-results+xml'
+        resource_not_found_error "#{uri} not found." unless rdf.match("#{uri}")
+        rdf
+      end
+
       def self.get uri, mime_type
         bad_request_error "'#{mime_type}' is not a supported mime type. Please specify one of #{@@accept_formats.join(", ")} in the Accept Header." unless @@accept_formats.include? mime_type
         sparql = "CONSTRUCT {?s ?p ?o.} FROM <#{uri}> WHERE { ?s ?p ?o. }"
@@ -62,7 +69,7 @@ module OpenTox
         if sparql =~ /SELECT/i
           # return list unless mime_type
           case mime_type
-          when 'application/sparql-results+xml' 
+          when 'application/sparql-results+xml'
             RestClient.get(sparql_uri, :params => { :query => sparql }, :accept => mime_type).body
           when 'application/json'
             RestClient.get(sparql_uri, :params => { :query => sparql }, :accept => mime_type).body
@@ -80,7 +87,6 @@ module OpenTox
           when /html|turtle/
             # TODO: fix and improve
             nt = RestClient.get(sparql_uri, :params => { :query => sparql }, :accept => "text/plain").body # 4store returns ntriples for turtle
-
             rdf = RDF::Graph.new
             RDF::Reader.for(:ntriples).new(nt) do |reader|
               reader.each_statement { |statement| rdf << statement }
@@ -88,7 +94,7 @@ module OpenTox
             prefixes = {:rdf => "http://www.w3.org/1999/02/22-rdf-syntax-ns#type"}
             ['OT', 'DC', 'XSD', 'OLO'].each{|p| prefixes[p.downcase.to_sym] = eval("RDF::#{p}.to_s") }
             # TODO: fails for large datasets?? multi_cell_call
-            turtle = RDF::N3::Writer.for(:turtle).buffer(:prefixes => prefixes)  do |writer|
+            turtle = RDF::Turtle::Writer.for(:turtle).buffer(:prefixes => prefixes) do |writer|
               rdf.each{|statement| writer << statement}
             end
             regex = Regexp.new '(https?:\/\/[\S]+)([>"])'
