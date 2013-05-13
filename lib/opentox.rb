@@ -114,7 +114,7 @@ module OpenTox
     # HEAD request for object in backend
     # algorithm, dataset, compound and validation overwrite this
     head "/#{SERVICE}/:id/?" do
-      resource_not_found_error "#{uri} not found." unless FourStore.head(@uri)
+      resource_not_found_error "#{uri} not found." unless FourStore.head(@uri.split('?').first)
     end
 
     # Get a list of objects at the server or perform a SPARQL query
