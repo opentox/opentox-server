@@ -42,7 +42,12 @@ module OpenTox
         bad_request_error "'#{mime_type}' is not a supported content type. Please use one of #{@@content_type_formats.join(", ")}." unless @@content_type_formats.include? mime_type
         bad_request_error "Reqest body empty." unless rdf 
         mime_type = "application/x-turtle" if mime_type == "text/plain"
-        RestClientWrapper.put File.join(four_store_uri,"data",uri), rdf, :content_type => mime_type 
+        RestClientWrapper.put File.join(four_store_uri,"data",uri), rdf, :content_type => mime_type
+        # prevent 4store from dublicates
+        # sparql for modified time (DELETE WHERE is not supported)-> delete -> insert new time
+        date = query "SELECT ?date WHERE { <#{uri}> <#{RDF::DC.modified}> ?date }", "application/sparql-results+xml"
+        date = date.match("\<literal\>.*\<\/literal\>").to_s.gsub(/\<literal\>|<\/literal\>/, "")
+        update "DELETE DATA { GRAPH <#{uri}> { <#{uri}> <#{RDF::DC.modified}> \"#{date}\" } }" if date.size >0
         update "INSERT DATA { GRAPH <#{uri}> { <#{uri}> <#{RDF::DC.modified}> \"#{DateTime.now}\" } }"
       end
 
