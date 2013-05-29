@@ -28,7 +28,8 @@ module OpenTox
     end
 
     before do
-      @uri = uri(request.env['REQUEST_URI'])
+      @uri = uri(request.env['PATH_INFO']) # prevent /algorithm/algorithm in algorithm service
+      #@uri = uri(request.env['REQUEST_URI'])
       get_subjectid if respond_to? :get_subjectid
       # fix IE
       request.env['HTTP_ACCEPT'] += ";text/html" if request.env["HTTP_USER_AGENT"]=~/MSIE/
@@ -45,6 +46,7 @@ module OpenTox
 
     after do
       Authorization.check_policy(@uri, @subjectid) if env['REQUEST_METHOD'].to_s == "POST" && $aa[:uri]
+
     end
 
 
@@ -61,6 +63,39 @@ module OpenTox
         else
           @body = request.body.read
           @content_type = request.content_type
+        end
+      end
+
+      # format output according to accept header
+      def render object
+        if object.class == String
+          case @accept
+          when /text\/html/
+            content_type "text/html"
+            object.to_html
+          else
+            content_type 'text/uri-list'
+            object
+          end
+        elsif object.class == Array
+          content_type 'text/uri-list'
+          object.join "\n"
+        else
+          case @accept
+          when "application/rdf+xml"
+            content_type "application/rdf+xml"
+            object.to_rdfxml
+          when /text\/html/
+            content_type "text/html"
+            object.to_html
+          when /turtle/
+            content_type "text/turtle"
+            object.to_turtle
+          else
+            content_type "text/plain"
+            object.to_ntriples
+          end
+    
         end
       end
     end

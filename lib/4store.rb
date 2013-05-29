@@ -28,7 +28,7 @@ module OpenTox
         bad_request_error "Request body empty." unless rdf 
         mime_type = "application/x-turtle" if mime_type == "text/plain" # ntriples is turtle in 4store
         RestClient.post File.join(four_store_uri,"data")+"/", :data => rdf.gsub(/\\C/,'C'), :graph => uri, "mime-type" => mime_type # remove backslashes in SMILES (4store interprets them as UTF-8 \C even within single quoates)
-        update "INSERT DATA { GRAPH <#{uri}> { <#{uri}> <#{RDF::DC.modified}> \"#{DateTime.now}\" } }"
+        #update "INSERT DATA { GRAPH <#{uri}> { <#{uri}> <#{RDF::DC.modified}> \"#{DateTime.now}\" } }"
       end
 
       def self.put uri, rdf, mime_type
@@ -36,7 +36,7 @@ module OpenTox
         bad_request_error "Reqest body empty." unless rdf 
         mime_type = "application/x-turtle" if mime_type == "text/plain"
         RestClientWrapper.put File.join(four_store_uri,"data",uri), rdf, :content_type => mime_type 
-        update "INSERT DATA { GRAPH <#{uri}> { <#{uri}> <#{RDF::DC.modified}> \"#{DateTime.now}\" } }"
+        #update "INSERT DATA { GRAPH <#{uri}> { <#{uri}> <#{RDF::DC.modified}> \"#{DateTime.now}\" } }"
       end
 
       def self.delete uri
