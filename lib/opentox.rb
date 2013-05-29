@@ -144,7 +144,12 @@ module OpenTox
     # HEAD route for service check
     # algorithm, compound and validation overwrite this
     head "/#{SERVICE}/?" do
-      #$logger.debug "#{SERVICE.capitalize} service is running."
+    end
+
+    # HEAD request for object in backend
+    # algorithm, dataset, compound and validation overwrite this
+    head "/#{SERVICE}/:id/?" do
+      resource_not_found_error "#{uri} not found." unless FourStore.head(@uri.split('?').first)
     end
 
     # Get a list of objects at the server or perform a SPARQL query
