@@ -16,7 +16,7 @@ module OpenTox
       end
 
       def self.head uri
-        sparql = "SELECT DISTINCT ?g WHERE {GRAPH ?g {<#{uri}> <#{RDF::DC.modified}> ?o.} }"
+        sparql = "SELECT DISTINCT ?g WHERE {GRAPH ?g {<#{uri}> ?p ?o.} }"
         rdf = query sparql, 'application/sparql-results+xml'
         resource_not_found_error "#{uri} not found." unless rdf.match("#{uri}")
         rdf
