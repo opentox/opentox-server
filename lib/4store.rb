@@ -103,21 +103,24 @@ module OpenTox
           when "text/plain", "application/rdf+xml" 
             RestClient.get(sparql_uri, :params => { :query => sparql }, :accept => mime_type).body
           when /html|turtle/
-            # TODO: fix and improve
             nt = RestClient.get(sparql_uri, :params => { :query => sparql }, :accept => "text/plain").body # 4store returns ntriples for turtle
             rdf = RDF::Graph.new
             RDF::Reader.for(:ntriples).new(nt) do |reader|
               reader.each_statement { |statement| rdf << statement }
             end
-            prefixes = {:rdf => "http://www.w3.org/1999/02/22-rdf-syntax-ns#type"}
-            ['OT', 'DC', 'XSD', 'OLO'].each{|p| prefixes[p.downcase.to_sym] = eval("RDF::#{p}.to_s") }
-            # TODO: fails for large datasets?? multi_cell_call
-            turtle = RDF::Turtle::Writer.for(:turtle).buffer(:prefixes => prefixes) do |writer|
-              rdf.each{|statement| writer << statement}
+            if !rdf.empty?
+              prefixes = {:rdf => "http://www.w3.org/1999/02/22-rdf-syntax-ns#type"}
+              ['OT', 'DC', 'XSD', 'OLO'].each{|p| prefixes[p.downcase.to_sym] = eval("RDF::#{p}.to_s") }
+              # TODO: fails for large datasets?? multi_cell_call
+              turtle = RDF::Writer.for(:turtle).buffer(:prefixes => prefixes) do |writer|
+                writer << rdf
+              end
+              regex = Regexp.new '(https?:\/\/[\S]+)([>"])'
+              turtle =  "<html><body>" + turtle.gsub( regex, '<a href="\1">\1</a>\2' ).gsub(/\n/,'<br/>') + "</body></html>" if mime_type =~ /html/ and !turtle.empty?
+              turtle
+            else
+              rdf
             end
-            regex = Regexp.new '(https?:\/\/[\S]+)([>"])'
-            turtle =  "<html><body>" + turtle.gsub( regex, '<a href="\1">\1</a>\2' ).gsub(/\n/,'<br/>') + "</body></html>" if mime_type =~ /html/ and !turtle.empty?
-            turtle
           end
         else
           # TODO: check if this prevents SPARQL injections
