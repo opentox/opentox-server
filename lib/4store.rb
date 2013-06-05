@@ -8,7 +8,19 @@ module OpenTox
       def self.list mime_type
         bad_request_error "'#{mime_type}' is not a supported mime type. Please specify one of #{@@accept_formats.join(", ")} in the Accept Header." unless @@accept_formats.include? mime_type
         if mime_type =~ /(uri-list|html)/
-          sparql = "SELECT DISTINCT ?g WHERE {GRAPH ?g {?s <#{RDF.type}> <#{klass}>; <#{RDF::DC.modified}> ?o.} } ORDER BY ?o"
+          sparql = "SELECT DISTINCT ?g WHERE {GRAPH ?g {?g ?p ?o} }"
+=begin
+          #sparql = "SELECT DISTINCT ?g WHERE {GRAPH ?g {?s <#{RDF.type}> <#{klass}>; <#{RDF::DC.modified}> ?o.} } ORDER BY ?o"
+          # not working for multiple DC.modified
+          sparql = "SELECT DISTINCT ?g WHERE {
+            GRAPH ?g {
+              ?g <#{RDF.type}> <#{klass}>.
+              OPTIONAL {?g <#{RDF::DC.date}> ?date.}
+              OPTIONAL {?g <#{RDF::OT.created_at}> ?date.}
+              OPTIONAL {?g <#{RDF::DC.modified}> ?date.}
+            }
+         } ORDER BY ?date"
+=end
         else 
           sparql = "CONSTRUCT {?s ?p ?o.} WHERE {?s <#{RDF.type}> <#{klass}>; ?p ?o. }"
         end
@@ -16,7 +28,7 @@ module OpenTox
       end
 
       def self.head uri
-        sparql = "SELECT DISTINCT ?g WHERE {GRAPH ?g {<#{uri}> <#{RDF::DC.modified}> ?o.} }"
+        sparql = "SELECT DISTINCT ?g WHERE {GRAPH ?g {<#{uri}> ?p ?o.} }"
         rdf = query sparql, 'application/sparql-results+xml'
         resource_not_found_error "#{uri} not found." unless rdf.match("#{uri}")
         rdf
@@ -34,8 +46,8 @@ module OpenTox
         bad_request_error "'#{mime_type}' is not a supported content type. Please use one of #{@@content_type_formats.join(", ")}." unless @@content_type_formats.include? mime_type or mime_type == "multipart/form-data"
         bad_request_error "Request body empty." unless rdf 
         mime_type = "application/x-turtle" if mime_type == "text/plain" # ntriples is turtle in 4store
-        RestClient.post File.join(four_store_uri,"data")+"/", :data => rdf.gsub(/\\C/,'C'), :graph => uri, "mime-type" => mime_type # remove backslashes in SMILES (4store interprets them as UTF-8 \C even within single quoates)
-        #update "INSERT DATA { GRAPH <#{uri}> { <#{uri}> <#{RDF::DC.modified}> \"#{DateTime.now}\" } }"
+        RestClient.post File.join(four_store_uri,"data")+"/", :data => rdf.gsub(/\\C/,'C'), :graph => uri, "mime-type" => mime_type # remove backslashes in SMILES (4store interprets them as UTF-8 \C even within single quotes)
+        update "INSERT DATA { GRAPH <#{uri}> { <#{uri}> <#{RDF::DC.modified}> \"#{DateTime.now}\" } }"
       end
 
       def self.put uri, rdf, mime_type
@@ -44,7 +56,7 @@ module OpenTox
         mime_type = "application/x-turtle" if mime_type == "text/plain"
         RestClientWrapper.put File.join(four_store_uri,"data",uri), rdf, :content_type => mime_type 
 # update moved to opentox-client to improve performance
-        #update "INSERT DATA { GRAPH <#{uri}> { <#{uri}> <#{RDF::DC.modified}> \"#{DateTime.now}\" } }"
+        update "INSERT DATA { GRAPH <#{uri}> { <#{uri}> <#{RDF::DC.modified}> \"#{DateTime.now}\" } }"
 #        RestClientWrapper.put File.join(four_store_uri,"data",uri), rdf, :content_type => mime_type
 #        update "WITH <#{uri}>
 #                DELETE {<#{uri}> <{RDF::DC.modified}> ?o}

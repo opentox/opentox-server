@@ -29,7 +29,6 @@ module OpenTox
 
     before do
       @uri = uri(request.env['PATH_INFO']) # prevent /algorithm/algorithm in algorithm service
-      #@uri = uri(request.env['REQUEST_URI'])
       get_subjectid if respond_to? :get_subjectid
       # fix IE
       request.env['HTTP_ACCEPT'] += ";text/html" if request.env["HTTP_USER_AGENT"]=~/MSIE/
