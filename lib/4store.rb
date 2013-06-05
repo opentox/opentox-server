@@ -97,12 +97,12 @@ module OpenTox
             prefixes = {:rdf => "http://www.w3.org/1999/02/22-rdf-syntax-ns#type"}
             ['OT', 'DC', 'XSD', 'OLO'].each{|p| prefixes[p.downcase.to_sym] = eval("RDF::#{p}.to_s") }
             # TODO: fails for large datasets?? multi_cell_call
-            turtle = RDF::Turtle::Writer.for(:turtle).buffer(:prefixes => prefixes) do |writer|
-              rdf.each{|statement| writer << statement}
+            turtle = RDF::Writer.for(:turtle).buffer(:prefixes => prefixes) do |writer|
+              writer << rdf
             end
-            regex = Regexp.new '(https?:\/\/[\S]+)([>"])'
-            turtle =  "<html><body>" + turtle.gsub( regex, '<a href="\1">\1</a>\2' ).gsub(/\n/,'<br/>') + "</body></html>" if mime_type =~ /html/ and !turtle.empty?
-            turtle
+            #regex = Regexp.new '(https?:\/\/[\S]+)([>"])'
+            #turtle =  "<html><body>" + turtle.gsub( regex, '<a href="\1">\1</a>\2' ).gsub(/\n/,'<br/>') + "</body></html>" if mime_type =~ /html/ and !turtle.empty?
+            turtle.to_html if mime_type =~ /html/ and !turtle.empty?
           end
         else
           # TODO: check if this prevents SPARQL injections
