@@ -8,7 +8,7 @@ module OpenTox
       def self.list mime_type
         bad_request_error "'#{mime_type}' is not a supported mime type. Please specify one of #{@@accept_formats.join(", ")} in the Accept Header." unless @@accept_formats.include? mime_type
         if mime_type =~ /(uri-list|html)/
-          sparql = "SELECT DISTINCT ?g WHERE {GRAPH ?g {?s <#{RDF.type}> <#{klass}>; <#{RDF::DC.modified}> ?o.} } ORDER BY ?o"
+          sparql = "SELECT DISTINCT ?g WHERE {GRAPH ?g {?s <#{RDF.type}> <#{klass}>; <#{RDF::DC.date}> ?o.} } ORDER BY ?o"
         else 
           sparql = "CONSTRUCT {?s ?p ?o.} WHERE {?s <#{RDF.type}> <#{klass}>; ?p ?o. }"
         end
@@ -43,10 +43,7 @@ module OpenTox
         bad_request_error "Reqest body empty." unless rdf 
         mime_type = "application/x-turtle" if mime_type == "text/plain"
         RestClientWrapper.put File.join(four_store_uri,"data",uri), rdf, :content_type => mime_type
-        update "WITH <#{uri}>
-                DELETE {<#{uri}> <{RDF::DC.modified}> ?o}
-                WHERE {<#{uri}> <{RDF::DC.modified}> ?o};
-                INSERT DATA { GRAPH <#{uri}> { <#{uri}> <#{RDF::DC.modified}> \"#{DateTime.now}\" } }"
+        update "INSERT DATA { GRAPH <#{uri}> { <#{uri}> <#{RDF::DC.modified}> \"#{DateTime.now}\" } }"
       end
 
       def self.delete uri
@@ -87,24 +84,33 @@ module OpenTox
           case mime_type
           when "text/plain", "application/rdf+xml" 
             RestClient.get(sparql_uri, :params => { :query => sparql }, :accept => mime_type).body
-          when /html|turtle/
-            nt = RestClient.get(sparql_uri, :params => { :query => sparql }, :accept => "text/plain").body # 4store returns ntriples for turtle
-            rdf = RDF::Graph.new
-            RDF::Reader.for(:ntriples).new(nt) do |reader|
-              reader.each_statement { |statement| rdf << statement }
-            end
-            if !rdf.empty?
+          when /turtle/
+            nt = RestClient.get(sparql_uri, :params => { :query => sparql }, :accept => "text/tab-separated-values").body # 4store returns ntriples for turtle
+            if !nt.empty?
+              rdf = RDF::Graph.new
+              RDF::Reader.for(:ntriples).new(nt) do |reader|
+                reader.each_statement { |statement| rdf << statement }
+              end
               prefixes = {:rdf => "http://www.w3.org/1999/02/22-rdf-syntax-ns#type"}
               ['OT', 'DC', 'XSD', 'OLO'].each{|p| prefixes[p.downcase.to_sym] = eval("RDF::#{p}.to_s") }
               # TODO: fails for large datasets?? multi_cell_call
-              turtle = RDF::Writer.for(:turtle).buffer(:prefixes => prefixes) do |writer|
+              turtle = RDF::Turtle::Writer.for(:turtle).buffer(:prefixes => prefixes) do |writer|
                 writer << rdf
               end
-              regex = Regexp.new '(https?:\/\/[\S]+)([>"])'
-              turtle =  "<html><body>" + turtle.gsub( regex, '<a href="\1">\1</a>\2' ).gsub(/\n/,'<br/>') + "</body></html>" if mime_type =~ /html/ and !turtle.empty?
-              turtle
             else
-              rdf
+              nt
+            end
+          when /html/
+            # modified ntriples output, delivers large datasets
+            #TODO optimize representation
+            nt = RestClient.get(sparql_uri, :params => { :query => sparql }, :accept => "text/plain").body
+            if !nt.empty?
+              regex = Regexp.new '(https?:\/\/[\S]+)([>"])'
+              bnode = Regexp.new '_:[a-z0-9]*'
+              html =  "<html><body>" + nt.gsub(regex, '<a href="\1">\1</a>\2').gsub(/\n/,'<br/>').gsub(bnode, '<>') + "</body></html>"
+              html
+            else
+              nt
             end
           end
         else
