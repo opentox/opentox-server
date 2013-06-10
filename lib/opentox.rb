@@ -131,6 +131,17 @@ module OpenTox
       end
     end
 
+    # internal route not in API
+    # example: /SERVICE/last/0 returns last 10 modified uris (default)
+    # example: /SERVICE/last/5 returns last 5 modified uris
+    get "/#{SERVICE}/last/:limit/?" do
+      limit = params[:limit].to_i > 0 ? params[:limit].to_i : 10
+      FourStore.query("SELECT DISTINCT ?g WHERE 
+      {GRAPH ?g 
+        {?s <#{RDF::DC.modified}> ?o.} 
+      } ORDER BY ?o LIMIT #{limit}", @accept)
+    end
+
     # Create a new resource
     post "/#{SERVICE}/?" do
       @uri = uri("/#{SERVICE}/#{SecureRandom.uuid}")
