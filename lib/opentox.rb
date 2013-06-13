@@ -132,9 +132,7 @@ module OpenTox
     end
 
     # internal route not in API
-    # example: /SERVICE/last/0 returns last 10 modified uris (default)
-    # example: /SERVICE/last/5 returns last 5 modified uris
-    get "/#{SERVICE}/ordered/?" do
+    get "/#{SERVICE}/last/ordered/?" do
       FourStore.query("SELECT DISTINCT ?s WHERE 
       {GRAPH ?g 
         {?s <#{RDF.type}> <#{RDF::OT}#{SERVICE.capitalize}>; <#{RDF::DC.date}> ?o. } 
