@@ -8,7 +8,7 @@ module OpenTox
       def self.list mime_type
         bad_request_error "'#{mime_type}' is not a supported mime type. Please specify one of #{@@accept_formats.join(", ")} in the Accept Header." unless @@accept_formats.include? mime_type
         if mime_type =~ /(uri-list|html)/
-          sparql = "SELECT DISTINCT ?g WHERE {GRAPH ?g {?g ?p ?o} }"
+          sparql = "SELECT DISTINCT ?g WHERE {GRAPH ?g {?g <#{RDF.type}> <#{klass}>} }"
 =begin
           sparql = "SELECT DISTINCT ?g WHERE {GRAPH ?g {?s <#{RDF.type}> <#{klass}>; <#{RDF::DC.date}> ?o.} } ORDER BY ?o"
           #sparql = "SELECT DISTINCT ?g WHERE {GRAPH ?g {?s <#{RDF.type}> <#{klass}>; <#{RDF::DC.modified}> ?o.} } ORDER BY ?o"
