@@ -7,23 +7,10 @@ module OpenTox
 
       def self.list mime_type
         bad_request_error "'#{mime_type}' is not a supported mime type. Please specify one of #{@@accept_formats.join(", ")} in the Accept Header." unless @@accept_formats.include? mime_type
-        if mime_type =~ /(uri-list|html)/
-          sparql = "SELECT DISTINCT ?g WHERE {GRAPH ?g {?g <#{RDF.type}> <#{klass}>} }"
-=begin
-          sparql = "SELECT DISTINCT ?g WHERE {GRAPH ?g {?s <#{RDF.type}> <#{klass}>; <#{RDF::DC.date}> ?o.} } ORDER BY ?o"
-          #sparql = "SELECT DISTINCT ?g WHERE {GRAPH ?g {?s <#{RDF.type}> <#{klass}>; <#{RDF::DC.modified}> ?o.} } ORDER BY ?o"
-          # not working for multiple DC.modified
-          sparql = "SELECT DISTINCT ?g WHERE {
-            GRAPH ?g {
-              ?g <#{RDF.type}> <#{klass}>.
-              OPTIONAL {?g <#{RDF::DC.date}> ?date.}
-              OPTIONAL {?g <#{RDF::OT.created_at}> ?date.}
-              OPTIONAL {?g <#{RDF::DC.modified}> ?date.}
-            }
-         } ORDER BY ?date"
-=end
-        else 
-          sparql = "CONSTRUCT {?s ?p ?o.} WHERE {?s <#{RDF.type}> <#{klass}>; ?p ?o. }"
+        if mime_type =~ /(uri-list|html|sparql-results)/
+          sparql = "SELECT DISTINCT ?uri WHERE {GRAPH ?uri {?uri <#{RDF.type}> <#{klass}>.} }"
+        else
+          sparql = "CONSTRUCT {?uri <#{RDF.type}> <#{klass}>.} WHERE { GRAPH ?uri {?uri <#{RDF.type}> <#{klass}>.} }"
         end
         query sparql, mime_type
       end

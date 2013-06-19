@@ -165,6 +165,14 @@ module OpenTox
       end
     end
 
+    # internal route not in API
+    get "/#{SERVICE}/last/ordered/?" do
+      FourStore.query("SELECT DISTINCT ?s WHERE 
+      {GRAPH ?g 
+        {?s <#{RDF.type}> <#{RDF::OT}#{SERVICE.capitalize}>; <#{RDF::DC.date}> ?o. } 
+      } ORDER BY ?o ", @accept)
+    end
+
     # Create a new resource
     post "/#{SERVICE}/?" do
       @uri = uri("/#{SERVICE}/#{SecureRandom.uuid}")
