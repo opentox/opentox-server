@@ -115,6 +115,7 @@ module OpenTox
           # see http://rack.rubyforge.org/doc/SPEC.html
           subjectid = CGI.unescape(subjectid) if subjectid and subjectid.include?("%23")
           @subjectid = subjectid
+          OpenTox::RestClientWrapper.subjectid = subjectid
         rescue
           @subjectid = nil
         end
