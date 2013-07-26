@@ -10,7 +10,8 @@ module OpenTox
       # @return [String] subjectid from session or nil
       def login(username, password)
         logout
-        session[:subjectid] = OpenTox::Authorization.authenticate(username, password)
+        OpenTox::Authorization.authenticate(username, password)
+        session[:subjectid] = OpenTox::RestClientWrapper.subjectid
         $logger.debug "ToxCreate login user #{username} with subjectid: " + session[:subjectid].to_s
         if session[:subjectid] != nil
           session[:username] = username
@@ -69,7 +70,7 @@ module OpenTox
         request_method = request.env['REQUEST_METHOD']
         uri = clean_uri("#{request.env['rack.url_scheme']}://#{request.env['HTTP_HOST']}#{request.env['REQUEST_URI']}") #.sub("http://","https://")
         request_method = "GET" if request_method == "POST" &&  uri =~ /\/model\/\d+\/?$/
-        return OpenTox::Authorization.authorized?(uri, request_method, subjectid)
+        return OpenTox::Authorization.authorized?(uri, request_method)
       end
 
       # Cleans URI from querystring and file-extension. Sets port 80 to emptystring
