@@ -37,7 +37,7 @@ module OpenTox
       # Checks session and valid subjectid token.
       # @return [Boolean] true/false
       def logged_in()
-        return true if !$aa[:uri]
+        return true if !$aa[SERVICE.to_sym][:uri]
         if session[:subjectid] != nil
           return OpenTox::Authorization.is_token_valid(session[:subjectid])
         end
@@ -126,7 +126,7 @@ module OpenTox
 
     before do
       get_subjectid()
-      unless !$aa[:uri] or login_request? or $aa[:free_request].include?(env['REQUEST_METHOD'].to_sym)
+      unless !$aa[SERVICE.to_sym][:uri] or login_request? or $aa[SERVICE.to_sym][:free_request].include?(env['REQUEST_METHOD'].to_sym)
         protected!(@subjectid)
       end
     end

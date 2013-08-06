@@ -3,7 +3,7 @@ require "sinatra/reloader"
 ENV["RACK_ENV"] ||= "production"
 require File.join(ENV["HOME"],".opentox","config","default.rb") if File.exist? File.join(ENV["HOME"],".opentox","config","default.rb")
 require File.join(ENV["HOME"],".opentox","config","#{SERVICE}.rb")
-
+$aa[SERVICE.to_sym] = $aa
 
 logfile = File.join(ENV['HOME'], ".opentox","log","#{ENV["RACK_ENV"]}.log")
 $logger = OTLogger.new(logfile) 
@@ -39,13 +39,13 @@ module OpenTox
       @accept = request.env['HTTP_ACCEPT']
       @accept = "text/html" if @accept =~ /\*\/\*/ or request.env["HTTP_USER_AGENT"]=~/MSIE/
       @accept = request.params["media"] if request.params["media"]
-      Authorization.check_policy(@uri) if env['REQUEST_METHOD'] == "PUT" && $aa[:uri]
+      Authorization.check_policy(@uri) if env['REQUEST_METHOD'] == "PUT" && $aa[SERVICE.to_sym][:uri] && $aa[SERVICE.to_sym]
       response['Content-Type'] = @accept
     end
 
     after do
-      Authorization.check_policy(@uri) if env['REQUEST_METHOD'].to_s == "POST" && $aa[:uri]
-
+      Authorization.check_policy(@uri) if env['REQUEST_METHOD'].to_s == "POST" && $aa[SERVICE.to_sym][:uri] && $aa[SERVICE.to_sym]
+      Authorization.delete_policies_from_uri(@uri) if env['REQUEST_METHOD'].to_s == "DELETE" && $aa[SERVICE.to_sym][:uri] && $aa[SERVICE.to_sym]
     end
 
 
