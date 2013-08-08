@@ -98,22 +98,23 @@ module OpenTox
         end
       end
     end
-
-    # Attention: Error within tasks are catched by Task.run
-    error do
-      error = request.env['sinatra.error']
-      if error.respond_to? :report
-        body = error.report.to_turtle
-      else
-        response['Content-Type'] = "text/plain"
-        body = "#{error.message}\n"
-        body += "URI: #{error.uri}\n" if error.is_a?(RuntimeError)
-        body += error.backtrace.join("\n")
-      end
-      error.respond_to?(:http_code) ? code = error.http_code : code = 500
-      halt code, body
+    
+    
+    # ERROR HANDLING (for errors outside of tasks, errors inside of tasks are taken care of in Task.run) 
+    def return_ot_error(ot_error)
+      content_type "text/turtle" 
+      halt ot_error.http_code, ot_error.to_turtle
     end
     
+    error Exception do # wraps non-opentox-errors like NoMethodError within an InternalServerError 
+      error = request.env['sinatra.error']
+      return_ot_error(OpenTox::Error.new(500,error.message,nil,error.backtrace))
+    end
+    
+    error OpenTox::Error do # this covers all opentox errors
+      return_ot_error(request.env['sinatra.error'])
+    end
+
     def return_task( task )
       raise "http_code == nil" unless task.code!=nil
       case request.env['HTTP_ACCEPT']
