@@ -30,10 +30,12 @@ module OpenTox
     before do
       @uri = uri(request.env['PATH_INFO']) # prevent /algorithm/algorithm in algorithm service
       get_subjectid if respond_to? :get_subjectid
-
-      request.env['HTTP_ACCEPT'] += ";text/html" if request.env["HTTP_USER_AGENT"]=~/MSIE/ # fix for IE
-      request.env['HTTP_ACCEPT'] = request.params["media"] if request.params["media"] # allow to set accept type in url via ?media=<type>
-      request.env['HTTP_ACCEPT'] = "text/turtle" if request.env['HTTP_ACCEPT'] =~ /\*\/\*/ #set default to turtle
+      # fix for IE, and set accept to 'text/html' as we do exact-matching later (sth. like text/html,application/xhtml+xml,*/* is not supported)
+      request.env['HTTP_ACCEPT'] = "text/html" if request.env["HTTP_USER_AGENT"]=~/MSIE/ or request.env['HTTP_ACCEPT']=~/text\/html/
+      # support set accept via url by adding ?media=<type> to the url  
+      request.env['HTTP_ACCEPT'] = request.params["media"] if request.params["media"]
+      # default is turtle 
+      request.env['HTTP_ACCEPT'] = "text/turtle" if request.env['HTTP_ACCEPT'].size==0 or request.env['HTTP_ACCEPT']=~/\*\/\*/
       @accept = request.env['HTTP_ACCEPT']
 
       request.content_type ? response['Content-Type'] = request.content_type : response['Content-Type'] = request.env['HTTP_ACCEPT']
