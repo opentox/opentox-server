@@ -60,7 +60,7 @@ module OpenTox
             sleep 1
             retry
           else
-            bad_request_error $!.message, update_uri
+            bad_request_error $!.message, update_uri, $!.backtrace
           end
         end
       end
@@ -118,7 +118,7 @@ module OpenTox
           bad_request_error "Only SELECT and CONSTRUCT are accepted SPARQL statements."
         end
       rescue
-        bad_request_error $!.message, sparql_uri
+        bad_request_error $!.message, sparql_uri, $!.backtrace
       end
 
       def self.klass
