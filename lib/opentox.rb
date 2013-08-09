@@ -30,15 +30,14 @@ module OpenTox
     before do
       @uri = uri(request.env['PATH_INFO']) # prevent /algorithm/algorithm in algorithm service
       get_subjectid if respond_to? :get_subjectid
-      # fix IE
-      request.env['HTTP_ACCEPT'] += ";text/html" if request.env["HTTP_USER_AGENT"]=~/MSIE/
-      request.env['HTTP_ACCEPT'] = request.params["media"] if request.params["media"]
+
+      request.env['HTTP_ACCEPT'] += ";text/html" if request.env["HTTP_USER_AGENT"]=~/MSIE/ # fix for IE
+      request.env['HTTP_ACCEPT'] = request.params["media"] if request.params["media"] # allow to set accept type in url via ?media=<type>
+      request.env['HTTP_ACCEPT'] = "text/turtle" if request.env['HTTP_ACCEPT'] =~ /\*\/\*/ #set default to turtle
+      @accept = request.env['HTTP_ACCEPT']
 
       request.content_type ? response['Content-Type'] = request.content_type : response['Content-Type'] = request.env['HTTP_ACCEPT']
       parse_input if request.request_method =~ /POST|PUT/
-      @accept = request.env['HTTP_ACCEPT']
-      @accept = "text/html" if @accept =~ /\*\/\*/ or request.env["HTTP_USER_AGENT"]=~/MSIE/
-      @accept = request.params["media"] if request.params["media"]
       Authorization.check_policy(@uri) if env['REQUEST_METHOD'] == "PUT" && $aa[SERVICE.to_sym][:uri] && $aa[SERVICE.to_sym]
       response['Content-Type'] = @accept
     end
@@ -102,8 +101,14 @@ module OpenTox
     
     # ERROR HANDLING (for errors outside of tasks, errors inside of tasks are taken care of in Task.run) 
     def return_ot_error(ot_error)
-      content_type "text/turtle" 
-      halt ot_error.http_code, ot_error.to_turtle
+      case @accept
+      when /text\/html/
+        content_type "text/html"
+        halt ot_error.http_code, ot_error.to_turtle.to_html
+      else
+        content_type "text/turtle" 
+        halt ot_error.http_code, ot_error.to_turtle
+      end
     end
     
     error Exception do # wraps non-opentox-errors like NoMethodError within an InternalServerError 
