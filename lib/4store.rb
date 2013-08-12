@@ -18,7 +18,8 @@ module OpenTox
       def self.head uri
         sparql = "SELECT DISTINCT ?g WHERE {GRAPH ?g {<#{uri}> ?p ?o.} }"
         rdf = query sparql, 'application/sparql-results+xml'
-        resource_not_found_error "#{uri} not found." unless rdf.match("#{uri}")
+        #resource_not_found_error "#{uri} not found." unless rdf.match("#{uri}")
+        return nil unless rdf.match("#{uri}")
         rdf
       end
 
@@ -32,7 +33,7 @@ module OpenTox
 
       def self.post uri, rdf, mime_type
         bad_request_error "'#{mime_type}' is not a supported content type. Please use one of #{@@content_type_formats.join(", ")}." unless @@content_type_formats.include? mime_type or mime_type == "multipart/form-data"
-        bad_request_error "Request body empty." unless rdf 
+        bad_request_error "Request body empty." unless rdf
         mime_type = "application/x-turtle" if mime_type == "text/plain" # ntriples is turtle in 4store
         RestClient.post File.join(four_store_uri,"data")+"/", :data => rdf.gsub(/\\C/,'C'), :graph => uri, "mime-type" => mime_type # remove backslashes in SMILES (4store interprets them as UTF-8 \C even within single quotes)
         update "INSERT DATA { GRAPH <#{uri}> { <#{uri}> <#{RDF::DC.modified}> \"#{DateTime.now}\" } }"
@@ -40,7 +41,7 @@ module OpenTox
 
       def self.put uri, rdf, mime_type
         bad_request_error "'#{mime_type}' is not a supported content type. Please use one of #{@@content_type_formats.join(", ")}." unless @@content_type_formats.include? mime_type
-        bad_request_error "Reqest body empty." unless rdf 
+        bad_request_error "Reqest body empty." unless rdf
         mime_type = "application/x-turtle" if mime_type == "text/plain"
         RestClientWrapper.put File.join(four_store_uri,"data",uri), rdf, :content_type => mime_type
         update "INSERT DATA { GRAPH <#{uri}> { <#{uri}> <#{RDF::DC.modified}> \"#{DateTime.now}\" } }"
@@ -82,7 +83,7 @@ module OpenTox
           end
         elsif sparql =~ /CONSTRUCT/i
           case mime_type
-          when "text/plain", "application/rdf+xml" 
+          when "text/plain", "application/rdf+xml"
             RestClient.get(sparql_uri, :params => { :query => sparql }, :accept => mime_type).body
           when /turtle/
             nt = RestClient.get(sparql_uri, :params => { :query => sparql }, :accept => "text/tab-separated-values").body # 4store returns ntriples for turtle
@@ -130,11 +131,11 @@ module OpenTox
         $four_store[:uri].sub(%r{//},"//#{$four_store[:user]}:#{$four_store[:password]}@")
       end
 
-      def self.sparql_uri 
+      def self.sparql_uri
         File.join(four_store_uri, "sparql") + '/'
       end
 
-      def self.update_uri 
+      def self.update_uri
         File.join(four_store_uri, "update") + '/'
       end
 

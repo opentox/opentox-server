@@ -1,12 +1,12 @@
 require 'sinatra/base'
-require "sinatra/reloader" 
+require "sinatra/reloader"
 ENV["RACK_ENV"] ||= "production"
 require File.join(ENV["HOME"],".opentox","config","default.rb") if File.exist? File.join(ENV["HOME"],".opentox","config","default.rb")
 require File.join(ENV["HOME"],".opentox","config","#{SERVICE}.rb")
 $aa[SERVICE.to_sym] = $aa
 
 logfile = File.join(ENV['HOME'], ".opentox","log","#{ENV["RACK_ENV"]}.log")
-$logger = OTLogger.new(logfile) 
+$logger = OTLogger.new(logfile)
 
 module OpenTox
 
@@ -32,9 +32,9 @@ module OpenTox
       get_subjectid if respond_to? :get_subjectid
       # fix for IE, and set accept to 'text/html' as we do exact-matching later (sth. like text/html,application/xhtml+xml,*/* is not supported)
       request.env['HTTP_ACCEPT'] = "text/html" if request.env["HTTP_USER_AGENT"]=~/MSIE/ or request.env['HTTP_ACCEPT']=~/text\/html/
-      # support set accept via url by adding ?media=<type> to the url  
+      # support set accept via url by adding ?media=<type> to the url
       request.env['HTTP_ACCEPT'] = request.params["media"] if request.params["media"]
-      # default is turtle 
+      # default is turtle
       request.env['HTTP_ACCEPT'] = "text/turtle" if request.env['HTTP_ACCEPT'].size==0 or request.env['HTTP_ACCEPT']=~/\*\/\*/
       @accept = request.env['HTTP_ACCEPT']
 
@@ -52,7 +52,7 @@ module OpenTox
 
     helpers do
       def parse_input
-        case request.content_type 
+        case request.content_type
         when /multipart/
           if params[:file]
             @body = params[:file][:tempfile].read
@@ -95,29 +95,29 @@ module OpenTox
             content_type "text/plain"
             object.to_ntriples
           end
-    
+
         end
       end
     end
-    
-    
-    # ERROR HANDLING (for errors outside of tasks, errors inside of tasks are taken care of in Task.run) 
+
+
+    # ERROR HANDLING (for errors outside of tasks, errors inside of tasks are taken care of in Task.run)
     def return_ot_error(ot_error)
       case @accept
       when /text\/html/
         content_type "text/html"
         halt ot_error.http_code, ot_error.to_turtle.to_html
       else
-        content_type "text/turtle" 
+        content_type "text/turtle"
         halt ot_error.http_code, ot_error.to_turtle
       end
     end
-    
-    error Exception do # wraps non-opentox-errors like NoMethodError within an InternalServerError 
+
+    error Exception do # wraps non-opentox-errors like NoMethodError within an InternalServerError
       error = request.env['sinatra.error']
       return_ot_error(OpenTox::Error.new(500,error.message,nil,error.backtrace))
     end
-    
+
     error OpenTox::Error do # this covers all opentox errors
       return_ot_error(request.env['sinatra.error'])
     end
@@ -134,7 +134,7 @@ module OpenTox
       when /html/
         response['Content-Type'] = "text/html"
         # html -> task created with html form -> redirect to task uri
-        redirect task.uri 
+        redirect task.uri
       else # default /uri-list/
         response['Content-Type'] = "text/uri-list"
         if task.completed?
@@ -143,7 +143,7 @@ module OpenTox
           halt task.code,task.uri+"\n"
         end
       end
-    end    
+    end
 
     # Default methods, may be overwritten by derived services
     # see http://jcalcote.wordpress.com/2008/10/16/put-or-post-the-rest-of-the-story/
@@ -156,7 +156,7 @@ module OpenTox
     # HEAD request for object in backend
     # algorithm, dataset, compound and validation overwrite this
     head "/#{SERVICE}/:id/?" do
-      resource_not_found_error "#{uri} not found." unless FourStore.head(@uri.split('?').first)
+      halt 404 unless FourStore.head(@uri.split('?').first)
     end
 
     # Get a list of objects at the server or perform a SPARQL query
@@ -164,7 +164,7 @@ module OpenTox
       if params[:query]
         case @accept
         when "text/uri-list" # result URIs are protected by A+A
-          FourStore.query(params[:query], "text/uri-list") 
+          FourStore.query(params[:query], "text/uri-list")
         else # prevent searches for protected resources
           bad_request_error "Accept header '#{@accept}' is disabled for SPARQL queries at service URIs in order to protect private data. Use 'text/uri-list' and repeat the query at the result URIs.", uri("/#{SERVICE}")
         end
@@ -175,9 +175,9 @@ module OpenTox
 
     # internal route not in API
     get "/#{SERVICE}/last/ordered/?" do
-      FourStore.query("SELECT DISTINCT ?s WHERE 
-      {GRAPH ?g 
-        {?s <#{RDF.type}> <#{RDF::OT}#{SERVICE.capitalize}>; <#{RDF::DC.date}> ?o. } 
+      FourStore.query("SELECT DISTINCT ?s WHERE
+      {GRAPH ?g
+        {?s <#{RDF.type}> <#{RDF::OT}#{SERVICE.capitalize}>; <#{RDF::DC.date}> ?o. }
       } ORDER BY ?o ", @accept)
     end
 
