@@ -38,7 +38,7 @@ module OpenTox
       request.env['HTTP_ACCEPT'] = "text/turtle" if request.env['HTTP_ACCEPT'].size==0 or request.env['HTTP_ACCEPT']=~/\*\/\*/
       @accept = request.env['HTTP_ACCEPT']
 
-      request.content_type ? response['Content-Type'] = request.content_type : response['Content-Type'] = request.env['HTTP_ACCEPT']
+      request.content_type ? response['Content_Type'] = request.content_type : response['Content_Type'] = request.env['HTTP_ACCEPT']
       parse_input if request.request_method =~ /POST|PUT/
       Authorization.check_policy(@uri) if env['REQUEST_METHOD'] == "PUT" && $aa[SERVICE.to_sym][:uri] && $aa[SERVICE.to_sym]
       response['Content-Type'] = @accept
