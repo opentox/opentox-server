@@ -1,10 +1,13 @@
 opentox-server: Common part for OpenTox webservices
+===================================================
 
 Installation:
+-------------
 
   gem install opentox-service
 
 Development:
+------------
 
   git clone git@github.com:<my-opentox-service>.git 
   cd <my-opentox-service>
@@ -30,3 +33,9 @@ Development:
   # create master
   # release
   rake release
+
+
+Documentation
+-------------
+* [API documentation](http://opentox.org/dev/api)
+* [RubyDoc.info Code documentation](http://rubydoc.info/github/opentox/opentox-server/development/frames)
