@@ -71,11 +71,11 @@ module OpenTox
           # return list unless mime_type
           case mime_type
           when 'application/sparql-results+xml'
-            RestClient.get(sparql_uri, :params => { :query => sparql }, :accept => mime_type).body
+            RestClient.get(sparql_uri, :params => { :query => sparql }, :accept => mime_type)
           when 'application/json'
-            RestClient.get(sparql_uri, :params => { :query => sparql }, :accept => mime_type).body
+            RestClient.get(sparql_uri, :params => { :query => sparql }, :accept => mime_type)
           when /(uri-list|html)/
-            uri_list = RestClient.get(sparql_uri, :params => { :query => sparql }, :accept => "text/plain").body.gsub(/"|<|>/,'').split("\n").drop(1).join("\n")
+            uri_list = RestClient.get(sparql_uri, :params => { :query => sparql }, :accept => "text/plain").gsub(/"|<|>/,'').split("\n").drop(1).join("\n")
             uri_list = uri_list.to_html if mime_type=~/html/
             return uri_list
           else
@@ -84,9 +84,9 @@ module OpenTox
         elsif sparql =~ /CONSTRUCT/i
           case mime_type
           when "text/plain", "application/rdf+xml"
-            RestClient.get(sparql_uri, :params => { :query => sparql }, :accept => mime_type).body
+            RestClient.get(sparql_uri, :params => { :query => sparql }, :accept => mime_type)
           when /turtle/
-            nt = RestClient.get(sparql_uri, :params => { :query => sparql }, :accept => "text/tab-separated-values").body # 4store returns ntriples for turtle
+            nt = RestClient.get(sparql_uri, :params => { :query => sparql }, :accept => "text/tab-separated-values") # 4store returns ntriples for turtle
             if !nt.empty?
               rdf = RDF::Graph.new
               RDF::Reader.for(:ntriples).new(nt) do |reader|
@@ -104,7 +104,7 @@ module OpenTox
           when /html/
             # modified ntriples output, delivers large datasets
             #TODO optimize representation
-            nt = RestClient.get(sparql_uri, :params => { :query => sparql }, :accept => "text/plain").body
+            nt = RestClient.get(sparql_uri, :params => { :query => sparql }, :accept => "text/plain")
             if !nt.empty?
               regex = Regexp.new '(https?:\/\/[\S]+)([>"])'
               bnode = Regexp.new '_:[a-z0-9]*'
