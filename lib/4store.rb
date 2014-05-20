@@ -43,7 +43,7 @@ module OpenTox
         bad_request_error "'#{mime_type}' is not a supported content type. Please use one of #{@@content_type_formats.join(", ")}." unless @@content_type_formats.include? mime_type
         bad_request_error "Reqest body empty." unless rdf
         mime_type = "application/x-turtle" if mime_type == "text/plain"
-        RestClientWrapper.put File.join(four_store_uri,"data",uri), rdf, :content_type => mime_type
+        RestClient.put File.join(four_store_uri,"data",uri), rdf, :content_type => mime_type
         update "INSERT DATA { GRAPH <#{uri}> { <#{uri}> <#{RDF::DC.modified}> \"#{DateTime.now}\" } }"
       end
 
