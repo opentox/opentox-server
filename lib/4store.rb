@@ -35,7 +35,7 @@ module OpenTox
         bad_request_error "'#{mime_type}' is not a supported content type. Please use one of #{@@content_type_formats.join(", ")}." unless @@content_type_formats.include? mime_type or mime_type == "multipart/form-data"
         bad_request_error "Request body empty." unless rdf
         mime_type = "application/x-turtle" if mime_type == "text/plain" # ntriples is turtle in 4store
-        RestClient.post File.join(four_store_uri,"data")+"/", :data => rdf.gsub(/\\C/,'C'), :graph => uri, "mime-type" => mime_type # remove backslashes in SMILES (4store interprets them as UTF-8 \C even within single quotes)
+        RestClient::Resource.new(File.join(four_store_uri,"data")+"/", :verify_ssl => 0).post :data => rdf.gsub(/\\C/,'C'), :graph => uri, "mime-type" => mime_type # remove backslashes in SMILES (4store interprets them as UTF-8 \C even within single quotes)
         update "INSERT DATA { GRAPH <#{uri}> { <#{uri}> <#{RDF::DC.modified}> \"#{DateTime.now}\" } }"
       end
 
@@ -43,7 +43,7 @@ module OpenTox
         bad_request_error "'#{mime_type}' is not a supported content type. Please use one of #{@@content_type_formats.join(", ")}." unless @@content_type_formats.include? mime_type
         bad_request_error "Reqest body empty." unless rdf
         mime_type = "application/x-turtle" if mime_type == "text/plain"
-        RestClient.put File.join(four_store_uri,"data",uri), rdf, :content_type => mime_type
+        RestClient::Resource.new(File.join(four_store_uri,"data",uri), :verify_ssl => 0).put rdf, :content_type => mime_type
         update "INSERT DATA { GRAPH <#{uri}> { <#{uri}> <#{RDF::DC.modified}> \"#{DateTime.now}\" } }"
       end
 
@@ -55,7 +55,7 @@ module OpenTox
         attempts = 0
         begin
           attempts += 1
-          RestClient.post(update_uri, :update => sparql )
+          RestClient::Resource.new(update_uri, :verify_ssl => 0).post(:update => sparql )
         rescue
           if attempts < 4 # 4store may return errors under heavy load
             sleep 1
@@ -71,11 +71,11 @@ module OpenTox
           # return list unless mime_type
           case mime_type
           when 'application/sparql-results+xml'
-            RestClient.get(sparql_uri, :params => { :query => sparql }, :accept => mime_type)
+            RestClient::Resource.new(sparql_uri, :verify_ssl => 0).get(:params => { :query => sparql }, :accept => mime_type)
           when 'application/json'
-            RestClient.get(sparql_uri, :params => { :query => sparql }, :accept => mime_type)
+            RestClient::Resource.new(sparql_uri, :verify_ssl => 0).get(:params => { :query => sparql }, :accept => mime_type)
           when /(uri-list|html)/
-            uri_list = RestClient.get(sparql_uri, :params => { :query => sparql }, :accept => "text/plain").gsub(/"|<|>/,'').split("\n").drop(1).join("\n")
+            uri_list = RestClient::Resource.new(sparql_uri, :verify_ssl => 0).get(:params => { :query => sparql }, :accept => "text/plain").gsub(/"|<|>/,'').split("\n").drop(1).join("\n")
             uri_list = uri_list.to_html if mime_type=~/html/
             return uri_list
           else
@@ -84,9 +84,9 @@ module OpenTox
         elsif sparql =~ /CONSTRUCT/i
           case mime_type
           when "text/plain", "application/rdf+xml"
-            RestClient.get(sparql_uri, :params => { :query => sparql }, :accept => mime_type)
+            RestClient::Resource.new(sparql_uri, :verify_ssl => 0).get(:params => { :query => sparql }, :accept => mime_type)
           when /turtle/
-            nt = RestClient.get(sparql_uri, :params => { :query => sparql }, :accept => "text/tab-separated-values") # 4store returns ntriples for turtle
+            nt = RestClient::Resource.new(sparql_uri, :verify_ssl => 0).get(:params => { :query => sparql }, :accept => "text/tab-separated-values") # 4store returns ntriples for turtle
             if !nt.empty?
               rdf = RDF::Graph.new
               RDF::Reader.for(:ntriples).new(nt) do |reader|
@@ -104,7 +104,7 @@ module OpenTox
           when /html/
             # modified ntriples output, delivers large datasets
             #TODO optimize representation
-            nt = RestClient.get(sparql_uri, :params => { :query => sparql }, :accept => "text/plain")
+            nt = RestClient::Resource.new(sparql_uri, :verify_ssl => 0).get(:params => { :query => sparql }, :accept => "text/plain")
             if !nt.empty?
               regex = Regexp.new '(https?:\/\/[\S]+)([>"])'
               bnode = Regexp.new '_:[a-z0-9]*'
