@@ -148,13 +148,17 @@ module OpenTox
     # Default methods, may be overwritten by derived services
     # see http://jcalcote.wordpress.com/2008/10/16/put-or-post-the-rest-of-the-story/
 
+    # HEAD methods only used if there is no GET method in the particular service
+    # E.g. "head "/#{SERVICE}/:id/?"" is overwritten by "get '/task/:id/?'"
+	# The following HEAD methods are only used by the feature service
+
     # HEAD route for service check
-    # algorithm, compound and validation overwrite this
+    # algorithm, dataset, model, compound, and validation overwrite this
     head "/#{SERVICE}/?" do
     end
 
     # HEAD request for object in backend
-    # algorithm, dataset, compound and validation overwrite this
+    # algorithm, dataset, model, compound, and validation overwrite this
     head "/#{SERVICE}/:id/?" do
       halt 404 unless FourStore.head(@uri.split('?').first)
     end
