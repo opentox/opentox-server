@@ -35,7 +35,7 @@ module OpenTox
         bad_request_error "'#{mime_type}' is not a supported content type. Please use one of #{@@content_type_formats.join(", ")}." unless @@content_type_formats.include? mime_type or mime_type == "multipart/form-data"
         bad_request_error "Request body empty." unless rdf
         mime_type = "application/x-turtle" if mime_type == "text/plain" # ntriples is turtle in 4store
-        RestClient::Resource.new(File.join(four_store_uri,"data")+"/", :verify_ssl => 0).post :data => rdf.gsub(/\\C/,'C'), :graph => uri, "mime-type" => mime_type # remove backslashes in SMILES (4store interprets them as UTF-8 \C even within single quotes)
+        RestClientWrapper.post File.join(four_store_uri,"data")+"/", :data => rdf.gsub(/\\C/,'C'), :graph => uri, "mime-type" => mime_type # remove backslashes in SMILES (4store interprets them as UTF-8 \C even within single quoates)
         update "INSERT DATA { GRAPH <#{uri}> { <#{uri}> <#{RDF::DC.modified}> \"#{DateTime.now}\" } }"
       end
 
@@ -43,7 +43,7 @@ module OpenTox
         bad_request_error "'#{mime_type}' is not a supported content type. Please use one of #{@@content_type_formats.join(", ")}." unless @@content_type_formats.include? mime_type
         bad_request_error "Reqest body empty." unless rdf
         mime_type = "application/x-turtle" if mime_type == "text/plain"
-        RestClient::Resource.new(File.join(four_store_uri,"data",uri), :verify_ssl => 0).put rdf, :content_type => mime_type
+        RestClientWrapper.put File.join(four_store_uri,"data",uri), rdf.gsub(/\\C/,'C'), :content_type => mime_type # remove backslashes in SMILES (4store interprets them as UTF-8 \C even within single quoates)
         update "INSERT DATA { GRAPH <#{uri}> { <#{uri}> <#{RDF::DC.modified}> \"#{DateTime.now}\" } }"
       end
 
@@ -52,6 +52,7 @@ module OpenTox
       end
 
       def self.update sparql
+        #TODO consider RestClientWrapper call
         attempts = 0
         begin
           attempts += 1
