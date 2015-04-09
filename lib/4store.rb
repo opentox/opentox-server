@@ -52,19 +52,7 @@ module OpenTox
       end
 
       def self.update sparql
-        #TODO consider RestClientWrapper call
-        attempts = 0
-        begin
-          attempts += 1
-          RestClient::Resource.new(update_uri, :verify_ssl => 0).post(:update => sparql )
-        rescue
-          if attempts < 4 # 4store may return errors under heavy load
-            sleep 1
-            retry
-          else
-            bad_request_error $!.message, update_uri, $!.backtrace
-          end
-        end
+        RestClientWrapper.post update_uri, {:update => sparql}
       end
 
       def self.query sparql, mime_type
@@ -72,11 +60,12 @@ module OpenTox
           # return list unless mime_type
           case mime_type
           when 'application/sparql-results+xml'
-            RestClient::Resource.new(sparql_uri, :verify_ssl => 0).get(:params => { :query => sparql }, :accept => mime_type)
+            RestClientWrapper.get(sparql_uri+"?query=#{CGI.escape(sparql)}",{}, { :accept => mime_type })
           when 'application/json'
-            RestClient::Resource.new(sparql_uri, :verify_ssl => 0).get(:params => { :query => sparql }, :accept => mime_type)
+            RestClientWrapper.get(sparql_uri+"?query=#{CGI.escape(sparql)}",{}, { :accept => mime_type })
           when /(uri-list|html)/
-            uri_list = RestClient::Resource.new(sparql_uri, :verify_ssl => 0).get(:params => { :query => sparql }, :accept => "text/plain").gsub(/"|<|>/,'').split("\n").drop(1).join("\n")
+            uri_list = RestClientWrapper.get(sparql_uri+"?query=#{CGI.escape(sparql)}",{}, { :accept => "text/plain" })
+            uri_list = uri_list.gsub(/"|<|>/,"").split("\n").drop(1).join("\n")
             uri_list = uri_list.to_html if mime_type=~/html/
             return uri_list
           else
@@ -85,9 +74,9 @@ module OpenTox
         elsif sparql =~ /CONSTRUCT/i
           case mime_type
           when "text/plain", "application/rdf+xml"
-            RestClient::Resource.new(sparql_uri, :verify_ssl => 0).get(:params => { :query => sparql }, :accept => mime_type)
+            RestClientWrapper.get(sparql_uri+"?query=#{CGI.escape(sparql)}",{}, { :accept => mime_type})
           when /turtle/
-            nt = RestClient::Resource.new(sparql_uri, :verify_ssl => 0).get(:params => { :query => sparql }, :accept => "text/tab-separated-values") # 4store returns ntriples for turtle
+            nt = RestClientWrapper.get(sparql_uri+"?query=#{CGI.escape(sparql)}",{},{ :accept => "text/tab-separated-values"})
             if !nt.empty?
               rdf = RDF::Graph.new
               RDF::Reader.for(:ntriples).new(nt) do |reader|
@@ -105,7 +94,7 @@ module OpenTox
           when /html/
             # modified ntriples output, delivers large datasets
             #TODO optimize representation
-            nt = RestClient::Resource.new(sparql_uri, :verify_ssl => 0).get(:params => { :query => sparql }, :accept => "text/plain")
+            nt = RestClientWrapper.get(sparql_uri+"?query=#{CGI.escape(sparql)}",{}, {:accept => "text/plain" })
             if !nt.empty?
               regex = Regexp.new '(https?:\/\/[\S]+)([>"])'
               bnode = Regexp.new '_:[a-z0-9]*'
