@@ -2,7 +2,13 @@ module OpenTox
   # Base class for OpenTox services
   class Application < Service
 
-    helpers do
+    #Module AuthorizationHelper
+    #@example AuthorizationHelper
+    #  require "opentox-server"
+    #  helpers OpenTox::Application::AuthorizationHelper
+    #  login("user", "password")
+    #  logout
+    module AuthorizationHelper
 
       # Login to get session for browser application(e.G.: ToxCreate)
       #
@@ -37,7 +43,7 @@ module OpenTox
       # Checks session and valid subjectid token.
       # @return [Boolean] true/false
       def logged_in()
-        return true if !$aa[SERVICE.to_sym][:uri]
+        return true unless $aa[SERVICE.to_sym][:uri]
         if session[:subjectid] != nil
           return OpenTox::Authorization.is_token_valid(session[:subjectid])
         end
@@ -48,7 +54,7 @@ module OpenTox
       # webapplication: redirects with flash[:notice] if unauthorized
       # webservice: raises error  if unauthorized
       # @param [String]subjectid
-      def protected!(subjectid)
+      def protected!(subjectid=RestClientWrapper.subjectid)
         if env["session"]
           unless authorized?(subjectid)
             flash[:notice] = "You don't have access to this section: "
@@ -66,7 +72,7 @@ module OpenTox
 
       # Check Authorization for URI with method and subjectid.
       # @param [String]subjectid
-      def authorized?(subjectid)
+      def authorized?(subjectid=RestClientWrapper.subjectid)
         request_method = request.env['REQUEST_METHOD']
         uri = clean_uri("#{request.env['rack.url_scheme']}://#{request.env['HTTP_HOST']}#{request.env['REQUEST_URI']}") #.sub("http://","https://")
         request_method = "GET" if request_method == "POST" &&  uri =~ /\/model\/\d+\/?$/
@@ -130,5 +136,10 @@ module OpenTox
         protected!(@subjectid)
       end
     end
+
+    helpers do
+     include AuthorizationHelper
+    end
+
   end
 end
