@@ -20,6 +20,7 @@ Gem::Specification.new do |s|
   s.add_runtime_dependency "opentox-client"
   s.add_runtime_dependency 'rack'
   s.add_runtime_dependency 'rack-contrib'
+  s.add_runtime_dependency 'rack-cors'
   s.add_runtime_dependency 'sinatra'
   s.add_runtime_dependency 'sinatra-contrib'
   s.add_runtime_dependency 'unicorn'

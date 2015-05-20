@@ -27,6 +27,17 @@ module OpenTox
       also_reload File.join(ENV["HOME"],".opentox","config","#{SERVICE}.rb")
     end
 
+    # add CORS support for swagger
+    use Rack::Cors do |config|
+      config.allow do |allow|
+        allow.origins '*'
+        allow.resource "/#{SERVICE}/*",
+          :methods => [:get, :post, :put ],
+          :headers => :any,
+          :max_age => 0
+      end
+    end
+
     before do
       @uri = uri(request.env['PATH_INFO']) # prevent /algorithm/algorithm in algorithm service
       get_subjectid if respond_to? :get_subjectid
