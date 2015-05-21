@@ -32,7 +32,7 @@ module OpenTox
       config.allow do |allow|
         allow.origins '*'
         allow.resource "/#{SERVICE}/*",
-          :methods => [:get, :post, :put ],
+          :methods => [:head, :get, :post, :put, :options],
           :headers => :any,
           :max_age => 0
       end
@@ -194,6 +194,14 @@ module OpenTox
       {GRAPH ?g
         {?s <#{RDF.type}> <#{RDF::OT}#{SERVICE.capitalize}>; <#{RDF::DC.date}> ?o. }
       } ORDER BY ?o ", @accept)
+    end
+
+    # generic route to swagger API file
+    get "/#{SERVICE}/api/?" do
+      response['Content-Type'] = "application/json"
+      api_file = File.join('api', 'swagger.json')
+      bad_request_error "API Documentation in Swagger JSON is not implemented.", uri("/#{SERVICE}/api") unless File.exists?(api_file)
+      File.read(api_file)
     end
 
     # Create a new resource
