@@ -28,13 +28,15 @@ module OpenTox
     end
 
     # add CORS support for swagger
-    use Rack::Cors do |config|
-      config.allow do |allow|
-        allow.origins '*'
-        allow.resource "/#{SERVICE}/*",
-          :methods => [:head, :get, :post, :put, :options],
-          :headers => :any,
-          :max_age => 0
+    if eval("$#{SERVICE}[:cors]") == true
+      use Rack::Cors do |config|
+        config.allow do |allow|
+          allow.origins '*'
+          allow.resource "/#{SERVICE}/",
+            :methods => [:head, :get, :post, :put, :delete, :options],
+            :headers => :any,
+            :max_age => 0
+        end
       end
     end
 
