@@ -32,7 +32,7 @@ module OpenTox
       use Rack::Cors do |config|
         config.allow do |allow|
           allow.origins '*'
-          allow.resource "/#{SERVICE}/",
+          allow.resource "/#{SERVICE}/*",
             :methods => [:head, :get, :post, :put, :delete, :options],
             :headers => :any,
             :max_age => 0
