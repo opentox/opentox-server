@@ -21,7 +21,7 @@ Gem::Specification.new do |s|
   # specify any dependencies here; for example:
   s.add_runtime_dependency "opentox-client"
   s.add_runtime_dependency 'rack'
-  s.add_runtime_dependency 'rack-contrib'
+  s.add_runtime_dependency 'rack-contrib', "= 1.2.0" # hotfix for issue with 1.3.0
   s.add_runtime_dependency 'sinatra'
   s.add_runtime_dependency 'sinatra-contrib'
   s.add_runtime_dependency 'roo'
