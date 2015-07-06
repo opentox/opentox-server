@@ -12,7 +12,8 @@ module OpenTox
 
   # Base class for OpenTox services
   class Service < Sinatra::Base
-    include Backend
+    include Mongo
+    @mongo = MongoClient.new($mongodb[:uri])
 
     # use OpenTox error handling
     set :raise_errors, false
@@ -163,9 +164,12 @@ module OpenTox
       halt 404 unless FourStore.head(@uri.split('?').first)
     end
 
+    get "/#{SERVICE}/swagger" do
+    end
+
     # Get a list of objects at the server or perform a SPARQL query
     get "/#{SERVICE}/?" do
-      if params[:query]
+      if params[:query] # REMOVE? 
         case @accept
         when "text/uri-list" # result URIs are protected by A+A
           FourStore.query(params[:query], "text/uri-list")
@@ -173,12 +177,12 @@ module OpenTox
           bad_request_error "Accept header '#{@accept}' is disabled for SPARQL queries at service URIs in order to protect private data. Use 'text/uri-list' and repeat the query at the result URIs.", uri("/#{SERVICE}")
         end
       else
-        FourStore.list(@accept)
+        @mongo[SERVICE].find.projection(:uri => 1)
       end
     end
 
     # internal route not in API
-    get "/#{SERVICE}/last/ordered/?" do
+    get "/#{SERVICE}/last/ordered/?" do # REQUIRED?
       FourStore.query("SELECT DISTINCT ?s WHERE
       {GRAPH ?g
         {?s <#{RDF.type}> <#{RDF::OT}#{SERVICE.capitalize}>; <#{RDF::DC.date}> ?o. }
@@ -187,30 +191,31 @@ module OpenTox
 
     # Create a new resource
     post "/#{SERVICE}/?" do
-      @uri = uri("/#{SERVICE}/#{SecureRandom.uuid}")
-      FourStore.put(@uri, @body, @content_type)
+      @body[:uuid] = SecureRandom.uuid
+      @body[:uri] = uri("/#{SERVICE}/#{@body[uuid]}")
+      @mongo.insert_one @body
       response['Content-Type'] = "text/uri-list"
       @uri
     end
 
-    # Get resource representation or perform a SPARQL query
-    get "/#{SERVICE}/:id/?" do
-      params[:query] ?  FourStore.query(params[:query], @accept) : FourStore.get(@uri.split('?').first, @accept)
+    # Get resource representation 
+    get "/#{SERVICE}/:id/?" do 
+      @mongo.find(:uri => @uri)
     end
 
     # Modify (i.e. add rdf statments to) a resource
-    post "/#{SERVICE}/:id/?" do
-      FourStore.post @uri, @body, @content_type
+    post "/#{SERVICE}/:id/?" do 
+      @mongo.find(:uri => @uri).find_one_and_update('$set' => @body) # ??
     end
 
     # Create or updata a resource
     put "/#{SERVICE}/:id/?" do
-      FourStore.put @uri, @body, @content_type
+      @mongo.find(:uri => @uri).find_one_and_replace(@body, :upsert => true) # ??
     end
 
     # Delete a resource
     delete "/#{SERVICE}/:id/?" do
-      FourStore.delete @uri
+      @mongo.find_one_and_delete(:uri => @uri)
     end
 
   end
