@@ -23,4 +23,5 @@ Gem::Specification.new do |s|
   s.add_runtime_dependency 'sinatra'
   s.add_runtime_dependency 'sinatra-contrib'
   s.add_runtime_dependency 'unicorn'
+  s.add_runtime_dependency 'mongo'
 end

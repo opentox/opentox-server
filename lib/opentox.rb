@@ -1,5 +1,7 @@
 require 'sinatra/base'
 require "sinatra/reloader"
+require 'mongo'
+
 ENV["RACK_ENV"] ||= "production"
 require File.join(ENV["HOME"],".opentox","config","default.rb") if File.exist? File.join(ENV["HOME"],".opentox","config","default.rb")
 require File.join(ENV["HOME"],".opentox","config","#{SERVICE}.rb")
@@ -8,12 +10,16 @@ $aa[SERVICE.to_sym] = $aa
 logfile = File.join(ENV['HOME'], ".opentox","log","#{ENV["RACK_ENV"]}.log")
 $logger = OTLogger.new(logfile)
 
+Mongo::Logger.logger = $logger
+Mongo::Logger.logger.level = Logger::WARN 
+$mongo = Mongo::Client.new($mongodb[:uri])
+#$mongo[SERVICE].create if $mongo[SERVICE].find.count == 0
+# TODO create collections $mongo[SERVICE].create if $mongo[SERVICE].find.count == 0
+
 module OpenTox
 
   # Base class for OpenTox services
   class Service < Sinatra::Base
-    include Mongo
-    @mongo = MongoClient.new($mongodb[:uri])
 
     # use OpenTox error handling
     set :raise_errors, false
@@ -30,13 +36,16 @@ module OpenTox
 
     before do
       @uri = uri(request.env['PATH_INFO']) # prevent /algorithm/algorithm in algorithm service
+      @uuid = params[:id]
       get_subjectid if respond_to? :get_subjectid
       # fix for IE, and set accept to 'text/html' as we do exact-matching later (sth. like text/html,application/xhtml+xml,*/* is not supported)
       request.env['HTTP_ACCEPT'] = "text/html" if request.env["HTTP_USER_AGENT"]=~/MSIE/ or request.env['HTTP_ACCEPT']=~/text\/html/
       # support set accept via url by adding ?media=<type> to the url
       request.env['HTTP_ACCEPT'] = request.params["media"] if request.params["media"]
-      # default is turtle
-      request.env['HTTP_ACCEPT'] = "text/turtle" if request.env['HTTP_ACCEPT'].size==0 or request.env['HTTP_ACCEPT']=~/\*\/\*/
+      # default is turtle ??
+      #request.env['HTTP_ACCEPT'] = "text/turtle" if request.env['HTTP_ACCEPT'].size==0 or request.env['HTTP_ACCEPT']=~/\*\/\*/
+      # default is application/json
+      request.env['HTTP_ACCEPT'] = "application/json" if request.env['HTTP_ACCEPT'].size==0 or request.env['HTTP_ACCEPT']=~/\*\/\*/
       @accept = request.env['HTTP_ACCEPT']
 
       request.content_type ? response['Content-Type'] = request.content_type : response['Content-Type'] = request.env['HTTP_ACCEPT']
@@ -69,34 +78,38 @@ module OpenTox
 
       # format output according to accept header
       def render object
-        if object.class == String
-          case @accept
-          when /text\/html/
-            content_type "text/html"
-            object.to_html
-          else
-            content_type 'text/uri-list'
-            object
-          end
-        elsif object.class == Array
-          content_type 'text/uri-list'
-          object.join "\n"
+        content_type @accept
+        return nil if object.nil?
+        if @accept == "application/json"
+          #object.delete("_id") if object and object["_id"]
+          return object.to_json
         else
-          case @accept
-          when "application/rdf+xml"
-            content_type "application/rdf+xml"
-            object.to_rdfxml
-          when /text\/html/
-            content_type "text/html"
-            object.to_html
-          when /turtle/
-            content_type "text/turtle"
-            object.to_turtle
+          if object.class == String
+            case @accept
+            when /text\/html/
+              object.to_html
+            else
+              content_type 'text/uri-list'
+              object
+            end
+          elsif object.class == Array
+            content_type 'text/uri-list'
+            object.join "\n"
           else
-            content_type "text/plain"
-            object.to_ntriples
-          end
+            case @accept
+            when "application/rdf+xml"
+              object.to_rdfxml
+            when /text\/html/
+              object.to_html
+            when /turtle/
+              object.to_turtle
+            when 'text/plain'
+              object.to_ntriples
+            else
+              bad_request_error "Mime type '#{@accept}' is not supported."
+            end
 
+          end
         end
       end
     end
@@ -107,10 +120,10 @@ module OpenTox
       case @accept
       when /text\/html/
         content_type "text/html"
-        halt ot_error.http_code, ot_error.to_turtle.to_html
+        halt ot_error.http_code, ot_error.to_html
       else
-        content_type "text/turtle"
-        halt ot_error.http_code, ot_error.to_turtle
+        content_type "application/json"
+        halt ot_error.http_code, ot_error.to_json
       end
     end
 
@@ -151,7 +164,7 @@ module OpenTox
 
     # HEAD methods only used if there is no GET method in the particular service
     # E.g. "head "/#{SERVICE}/:id/?"" is overwritten by "get '/task/:id/?'"
-	# The following HEAD methods are only used by the feature service
+	  # The following HEAD methods are only used by the feature service
 
     # HEAD route for service check
     # algorithm, dataset, model, compound, and validation overwrite this
@@ -161,7 +174,7 @@ module OpenTox
     # HEAD request for object in backend
     # algorithm, dataset, model, compound, and validation overwrite this
     head "/#{SERVICE}/:id/?" do
-      halt 404 unless FourStore.head(@uri.split('?').first)
+      halt 404 unless $mongo[SERVICE].find(:uri => @uri).count > 0
     end
 
     get "/#{SERVICE}/swagger" do
@@ -169,15 +182,15 @@ module OpenTox
 
     # Get a list of objects at the server or perform a SPARQL query
     get "/#{SERVICE}/?" do
-      if params[:query] # REMOVE? 
+      if params[:query]
         case @accept
         when "text/uri-list" # result URIs are protected by A+A
-          FourStore.query(params[:query], "text/uri-list")
+          render $mongo[SERVICE].find(params[:query]).distinct(:uri)
         else # prevent searches for protected resources
           bad_request_error "Accept header '#{@accept}' is disabled for SPARQL queries at service URIs in order to protect private data. Use 'text/uri-list' and repeat the query at the result URIs.", uri("/#{SERVICE}")
         end
       else
-        @mongo[SERVICE].find.projection(:uri => 1)
+        render $mongo[SERVICE].find.distinct(:uri)
       end
     end
 
@@ -193,29 +206,34 @@ module OpenTox
     post "/#{SERVICE}/?" do
       @body[:uuid] = SecureRandom.uuid
       @body[:uri] = uri("/#{SERVICE}/#{@body[uuid]}")
-      @mongo.insert_one @body
+      $mongo[SERVICE].insert_one @body
       response['Content-Type'] = "text/uri-list"
       @uri
     end
 
     # Get resource representation 
     get "/#{SERVICE}/:id/?" do 
-      @mongo.find(:uri => @uri)
+      response = $mongo[SERVICE].find(:uri => @uri)
+      response.count > 0 ? render(response.first) : resource_not_found_error("#{@uri} not found.")
     end
 
     # Modify (i.e. add rdf statments to) a resource
     post "/#{SERVICE}/:id/?" do 
-      @mongo.find(:uri => @uri).find_one_and_update('$set' => @body) # ??
+      $mongo[SERVICE].find(:uri => @uri).find_one_and_replace('$set' => JSON.parse(@body))
+      @uri
     end
 
     # Create or updata a resource
     put "/#{SERVICE}/:id/?" do
-      @mongo.find(:uri => @uri).find_one_and_replace(@body, :upsert => true) # ??
+      @body = JSON.parse(@body)
+      @body.delete("_id") # to enable updates
+      @body[:uri] = @uri
+      render $mongo[SERVICE].find(:uri => @uri).find_one_and_replace(@body, :upsert => true)
     end
 
     # Delete a resource
     delete "/#{SERVICE}/:id/?" do
-      @mongo.find_one_and_delete(:uri => @uri)
+      render $mongo[SERVICE].find(:uri => @uri).find_one_and_delete
     end
 
   end
