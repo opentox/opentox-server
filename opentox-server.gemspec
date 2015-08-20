@@ -23,5 +23,5 @@ Gem::Specification.new do |s|
   s.add_runtime_dependency 'rack-cors'
   s.add_runtime_dependency 'sinatra'
   s.add_runtime_dependency 'sinatra-contrib'
-  s.add_runtime_dependency 'unicorn'
+  s.add_runtime_dependency 'unicorn', "= 4.8.3"
 end
